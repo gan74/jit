@@ -20,8 +20,8 @@ file(GLOB_RECURSE SOURCE_FILES
 		"src/*.h"
 		"src/*.cpp"
 	)
-    
-    
+
+
 include_directories(./src/)
 
 

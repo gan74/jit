@@ -34,6 +34,8 @@ using i8 = std::int8_t;
 using i16 = std::int16_t;
 using i32 = std::int32_t;
 
+void fatal(const char* msg);
+
 template<typename R, typename... Args>
 using Fn = __cdecl R (*)(Args...);
 

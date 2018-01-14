@@ -58,58 +58,58 @@ void Assembler::pop_stack() {
 }
 
 void Assembler::ret() {
-	// retq
 	push(0xc3);
 }
 
 
-
-void Assembler::mov_eax(i32 value) {
-	// mov eax value
-	push(0xb8);
-	push_i32(value);
-}
-
-void Assembler::add_eax(i32 value) {
-	// add eax,value
-	push(0x05);
-	push_i32(value);
-}
-
-
-
-void Assembler::arg_to_eax(u8 arg_index) {
-	switch(arg_index) {
-		case 0:
-			// mov %eax,%ecx
-			push(0x89, 0xc8);
-			break;
-
-		case 1:
-			// mov %eax,%edx
-			push(0x89, 0xd0);
-			break;
-
-		case 2:
-			// mov %eax, %r8d
-			push(0x44, 0x89, 0xc0);
-			break;
-
-		case 3:
-			// mov %eax, %r9d
-			push(0x44, 0x89, 0xc8);
-			break;
-
-		default:
-			// mov %eax, arg_offset(%rbp)
-			u16 arg_offset = 0x10 + arg_index * 8;
-			if(arg_offset < 0x80) {
-				push(0x8b, 0x45, arg_offset);
-			} else {
-				push(0x8b, 0x85);
-				push_i32(arg_offset);
-			}
-			break;
+void Assembler::push_r_prefix(Register dst) {
+	if(dst.is_r()) {
+		push(0x41);
 	}
-
 }
+void Assembler::push_r_prefix(Register dst, Register src) {
+	if(src.is_r() || dst.is_r()) {
+		push(0x40 | (src.is_r() << 2) | dst.is_r());
+	}
+}
+
+
+void Assembler::mov(Register dst, Register src) {
+	push_r_prefix(dst, src);
+	push(0x89);
+	push(0xc0 | (src.r_index() << 3) | dst.r_index());
+}
+
+void Assembler::mov(Register dst, i32 value) {
+	push_r_prefix(dst);
+	push(0xb8 | dst.r_index());
+	push_i32(value);
+}
+
+
+
+void Assembler::add(Register dst, Register src) {
+	push_r_prefix(dst, src);
+	push(0x01);
+	push(0xc0 | (src.r_index() << 3) | dst.r_index());
+}
+
+void Assembler::add(Register dst, i32 value) {
+	if(dst == regs::eax) {
+		push(0x05);
+	} else {
+		push_r_prefix(dst);
+		push(0x81, 0xc0 | dst.r_index());
+	}
+	push_i32(value);
+}
+
+#include <cstdio>
+
+void Assembler::dump() const {
+	for(u8 b : _bytes) {
+		printf("%02x ", b);
+	}
+	printf("\n");
+}
+

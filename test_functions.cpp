@@ -19,69 +19,16 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 **********************************/
-#ifndef ASSEMBLER_H
-#define ASSEMBLER_H
 
-#include <vector>
+#include "src/utils.h"
 
-#include "Register.h"
-
-class Assembler
-{
-	public:
-		Assembler();
-
-		template<typename R, typename... Args>
-		Fn<R, Args...> compile() const {
-			return reinterpret_cast<Fn<R, Args...>>(alloc_compile());
-		}
-
-
-		void push_stack();
-		void pop_stack();
-		void ret();
-
-		void mov(Register dst, Register src);
-		void mov(Register dst, i32 value);
-
-		void add(Register dst, Register src);
-		void add(Register dst, i32 value);
-
-		void arg_to_eax(u8 arg_index);
-
-		void dump() const;
-
-	private:
-		std::vector<u8> _bytes;
-
-		void push_r_prefix(Register dst);
-		void push_r_prefix(Register dst, Register src);
-
-		void* alloc_compile() const;
+__cdecl i32 test(i32, i32, i32 x, i32, i32) {
+	return x;
+}
 
 
 
-
-
-		template<typename... Args>
-		void push(u8 b, Args... args) {
-			_bytes.push_back(b);
-			if constexpr(sizeof...(args)) {
-				push(args...);
-			}
-		}
-
-		void push_i32(i32 value) {
-			union i32_to_u8 {
-				i32 i;
-				u8 bytes[sizeof(i32)];
-			};
-			i32_to_u8 i;
-			i.i = value;
-			for(u8 u : i.bytes) {
-				push(u);
-			}
-		}
-};
-
-#endif // ASSEMBLER_H
+int main() {
+	test(0, 1, 2, 3, 4);
+	return 0;
+}
