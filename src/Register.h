@@ -28,11 +28,12 @@ SOFTWARE.
 
 class Register {
 	public:
-		Register(u32 index, u8 bits = 32) : _data(index + (bits << 4)) {
-			if (bits != 32) {
+		explicit Register(u32 index, u8 bits = 32) : _data(index + (bits << 4)) {
+			if (bits != 32 && bits != 64) {
 				fatal("Unsupported");
 			}
 		}
+
 
 		u8 bits() const {
 			return _data >> 4;
@@ -46,11 +47,15 @@ class Register {
 			return _data & 0x7;
 		}
 
+
+
 		bool is_r() const {
-			// 64 bits or R8..R15
-			return (_data & 0x0408) != 0;
+			return (_data & 0x0008) != 0;
 		}
 
+		bool is_64() const {
+			return (_data & 0x0500) != 0;
+		}
 
 		bool operator==(const Register& r) const {
 			return r._data == _data;
@@ -107,6 +112,27 @@ static Register r12d = Register(12);
 static Register r13d = Register(13);
 static Register r14d = Register(14);
 static Register r15d = Register(15);
+
+static Register rax  = Register(0, 64);
+static Register rcx  = Register(1, 64);
+static Register rdx  = Register(2, 64);
+static Register rbx  = Register(3, 64);
+
+static Register rsp  = Register(4, 64);
+static Register rbp  = Register(5, 64);
+static Register rsi  = Register(6, 64);
+static Register rdi  = Register(7, 64);
+
+static Register r8   = Register(8, 64);
+static Register r9   = Register(9, 64);
+static Register r10  = Register(10, 64);
+static Register r11  = Register(11, 64);
+
+static Register r12  = Register(12, 64);
+static Register r13  = Register(13, 64);
+static Register r14  = Register(14, 64);
+static Register r15 = Register(15, 64);
+
 
 
 static Register arg0 = ecx;

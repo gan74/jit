@@ -56,8 +56,9 @@ class Assembler
 	private:
 		std::vector<u8> _bytes;
 
+		void push_64_prefix(Register dst);
 		void push_r_prefix(Register dst);
-		void push_r_prefix(Register dst, Register src);
+		void push_r_prefix(Register a, Register b);
 
 		void generic_bin_op(u8 opcode, Register dst, Register src);
 		void generic_bin_op(u8 opcode, Register dst, i32 value);

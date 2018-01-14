@@ -26,5 +26,6 @@ SOFTWARE.
 
 void fatal(const char* msg) {
 	printf(msg);
+	printf("\n");
 	std::exit(1);
 }

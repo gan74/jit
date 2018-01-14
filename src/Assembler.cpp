@@ -29,6 +29,16 @@ SOFTWARE.
 #include <windows.h>
 #endif
 
+void check_bits(Register a, u8 bits) {
+	if(a.bits() != bits) {
+		fatal("Invalid number of bits");
+	}
+}
+
+void check_bits(Register a, Register b) {
+	check_bits(a, b.bits());
+}
+
 
 Assembler::Assembler() {
 }
@@ -77,16 +87,16 @@ void Assembler::ret() {
 
 
 
-
-
 void Assembler::push_r_prefix(Register dst) {
-	if(dst.is_r()) {
-		push(0x41);
+	if(dst.is_r() || dst.is_64()) {
+		push(0x40 | (dst.is_64() << 3) | dst.is_r());
 	}
 }
-void Assembler::push_r_prefix(Register dst, Register src) {
-	if(src.is_r() || dst.is_r()) {
-		push(0x40 | (src.is_r() << 2) | dst.is_r());
+void Assembler::push_r_prefix(Register a, Register b) {
+	bool is_64 = b.is_64();
+	if(a.is_r() || b.is_r() || is_64) {
+		u8 opcode = 0x40 | (is_64 << 3);
+		push(opcode | (b.is_r() << 2) | a.is_r());
 	}
 }
 
@@ -117,17 +127,30 @@ void Assembler::push_offset(u8 indexes, u32 offset) {
 
 
 void Assembler::mov(Register dst, Register src) {
+	// 64 bits = ok
+	check_bits(dst, src);
 	generic_bin_op(0x89, dst, src);
 }
 
 void Assembler::mov(Register dst, i32 value) {
+	// 64 bits = ok
+	if(dst.is_64() && !dst.is_r()) {
+		push(0x48);
+	}
 	push_r_prefix(dst);
 	push(0xb8 | dst.r_index());
 	push_i32(value);
+	// TODO: use instruction for 32 bit payloads
+	if(dst.is_64()) {
+		push_i32(0);
+	}
 }
 
 void Assembler::mov(Register dst, RegisterOffset src) {
-	push(0x67);
+	// 64 bits = ok
+	if(!src.reg().is_64()) {
+		push(0x67);
+	}
 	push_r_prefix(src.reg(), dst);
 	push(0x8b);
 	u8 indexes = (dst.r_index() << 3) | src.reg().r_index();
@@ -135,9 +158,11 @@ void Assembler::mov(Register dst, RegisterOffset src) {
 
 }
 
-
 void Assembler::mov(RegisterOffset dst, Register src) {
-	push(0x67);
+	// 64 bits = ok
+	if(!dst.reg().is_64()) {
+		push(0x67);
+	}
 	push_r_prefix(dst.reg(), src);
 	push(0x89);
 	u8 indexes = (src.r_index() << 3) | dst.reg().r_index();
@@ -145,11 +170,17 @@ void Assembler::mov(RegisterOffset dst, Register src) {
 }
 
 void Assembler::add(Register dst, Register src) {
+	// 64 bits = ok
+	check_bits(dst, src);
 	generic_bin_op(0x01, dst, src);
 }
 
 void Assembler::add(Register dst, i32 value) {
-	if(dst == regs::eax) {
+	// 64 bits = ok
+	if(dst == regs::rax) {
+		push(0x48, 0x05);
+		push_i32(value);
+	} else if(dst == regs::eax) {
 		push(0x05);
 		push_i32(value);
 	} else {

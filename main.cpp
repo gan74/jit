@@ -5,13 +5,12 @@
 
 int main() {
 	Assembler a;
-	a.push_stack();
+	//a.push_stack();
 
-	a.mov(regs::ebx, regs::r13d - 1);
-	a.mov(regs::r13d + 9, regs::ebx);
+	a.add(regs::rax, 0x1234567);
 
-	a.pop_stack();
-	a.ret();
+	//a.pop_stack();
+	//a.ret();
 
 	a.dump();
 
