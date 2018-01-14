@@ -61,24 +61,31 @@ class Register {
 };
 
 
-/*class RegisterOffset {
+class RegisterOffset {
 	public:
-		RegisterOffset(Register reg, u8 offset) : _reg(reg) {
+		RegisterOffset(Register reg, u32 offset) : _reg(reg), _offset(offset) {
 		}
 
-		u8 offset() const {
+		u32 offset() const {
 			return _offset;
+		}
+
+		Register reg() {
+			return _reg;
 		}
 
 	private:
 		Register _reg;
-		u8 _offset;
+		u32 _offset;
 };
 
-inline RegisterOffset operator+(Register reg, u8 offset) {
-	return RegisterOffset(reg, offset);
+inline RegisterOffset operator+(Register reg, i32 offset) {
+	return RegisterOffset(reg, u32(offset));
 }
-*/
+
+inline RegisterOffset operator-(Register reg, i32 offset) {
+	return RegisterOffset(reg, u32(-offset));
+}
 
 namespace regs {
 static Register eax  = Register(0);

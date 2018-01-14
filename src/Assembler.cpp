@@ -102,6 +102,17 @@ void Assembler::generic_bin_op(u8 opcode, Register dst, i32 value) {
 	push_i32(value);
 }
 
+void Assembler::push_offset(u8 indexes, u32 offset) {
+	if (!offset) {
+		push(indexes);
+	} else if(offset < 0x80) {
+		push(0x40 | indexes);
+		push(offset);
+	} else {
+		push(0x80 | indexes);
+		push_i32(offset);
+	}
+}
 
 
 
@@ -115,6 +126,23 @@ void Assembler::mov(Register dst, i32 value) {
 	push_i32(value);
 }
 
+void Assembler::mov(Register dst, RegisterOffset src) {
+	push(0x67);
+	push_r_prefix(src.reg(), dst);
+	push(0x8b);
+	u8 indexes = (dst.r_index() << 3) | src.reg().r_index();
+	push_offset(indexes, src.offset());
+
+}
+
+
+void Assembler::mov(RegisterOffset dst, Register src) {
+	push(0x67);
+	push_r_prefix(dst.reg(), src);
+	push(0x89);
+	u8 indexes = (src.r_index() << 3) | dst.reg().r_index();
+	push_offset(indexes, dst.offset());
+}
 
 void Assembler::add(Register dst, Register src) {
 	generic_bin_op(0x01, dst, src);

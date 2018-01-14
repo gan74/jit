@@ -43,6 +43,8 @@ class Assembler
 
 		void mov(Register dst, Register src);
 		void mov(Register dst, i32 value);
+		void mov(Register dst, RegisterOffset src);
+		void mov(RegisterOffset dst, Register src);
 
 		void add(Register dst, Register src);
 		void add(Register dst, i32 value);
@@ -59,6 +61,8 @@ class Assembler
 
 		void generic_bin_op(u8 opcode, Register dst, Register src);
 		void generic_bin_op(u8 opcode, Register dst, i32 value);
+
+		void push_offset(u8 indexes, u32 offset);
 
 		void* alloc_compile() const;
 
