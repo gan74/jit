@@ -57,6 +57,9 @@ class Assembler
 		void push_r_prefix(Register dst);
 		void push_r_prefix(Register dst, Register src);
 
+		void generic_bin_op(u8 opcode, Register dst, Register src);
+		void generic_bin_op(u8 opcode, Register dst, i32 value);
+
 		void* alloc_compile() const;
 
 

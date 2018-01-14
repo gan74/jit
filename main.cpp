@@ -8,7 +8,7 @@ int main() {
 	a.push_stack();
 
 	a.mov(regs::eax, regs::arg1);
-    a.add(regs::eax, 1);
+	a.add(regs::eax, regs::arg0);
 
 	a.pop_stack();
 	a.ret();
@@ -17,7 +17,7 @@ int main() {
 
 	auto fn = a.compile<i32, i32, i32>();
 
-	auto r = fn(1, 7);
+	auto r = fn(2, 7);
 
 	std::cout << "result = " << r << std::endl;
 

@@ -21,6 +21,9 @@ SOFTWARE.
 **********************************/
 #include "Assembler.h"
 
+
+#include <cstdio>
+
 #ifdef __WIN32
 #define WIN32_ASSEMBLER
 #include <windows.h>
@@ -28,6 +31,14 @@ SOFTWARE.
 
 
 Assembler::Assembler() {
+}
+
+
+void Assembler::dump() const {
+	for(u8 b : _bytes) {
+		printf("%02x ", b);
+	}
+	printf("\n");
 }
 
 void* Assembler::alloc_compile() const {
@@ -42,6 +53,8 @@ void* Assembler::alloc_compile() const {
 #error unsupported OS.
 #endif
 }
+
+
 
 
 
@@ -62,6 +75,10 @@ void Assembler::ret() {
 }
 
 
+
+
+
+
 void Assembler::push_r_prefix(Register dst) {
 	if(dst.is_r()) {
 		push(0x41);
@@ -74,10 +91,22 @@ void Assembler::push_r_prefix(Register dst, Register src) {
 }
 
 
-void Assembler::mov(Register dst, Register src) {
+void Assembler::generic_bin_op(u8 opcode, Register dst, Register src) {
 	push_r_prefix(dst, src);
-	push(0x89);
-	push(0xc0 | (src.r_index() << 3) | dst.r_index());
+	push(opcode, 0xc0 | (src.r_index() << 3) | dst.r_index());
+
+}
+void Assembler::generic_bin_op(u8 opcode, Register dst, i32 value) {
+	push_r_prefix(dst);
+	push(opcode, 0xc0 | dst.r_index());
+	push_i32(value);
+}
+
+
+
+
+void Assembler::mov(Register dst, Register src) {
+	generic_bin_op(0x89, dst, src);
 }
 
 void Assembler::mov(Register dst, i32 value) {
@@ -87,29 +116,22 @@ void Assembler::mov(Register dst, i32 value) {
 }
 
 
-
 void Assembler::add(Register dst, Register src) {
-	push_r_prefix(dst, src);
-	push(0x01);
-	push(0xc0 | (src.r_index() << 3) | dst.r_index());
+	generic_bin_op(0x01, dst, src);
 }
 
 void Assembler::add(Register dst, i32 value) {
 	if(dst == regs::eax) {
 		push(0x05);
+		push_i32(value);
 	} else {
-		push_r_prefix(dst);
-		push(0x81, 0xc0 | dst.r_index());
+		generic_bin_op(0x81, dst, value);
 	}
-	push_i32(value);
 }
 
-#include <cstdio>
 
-void Assembler::dump() const {
-	for(u8 b : _bytes) {
-		printf("%02x ", b);
-	}
-	printf("\n");
-}
+
+
+
+
 
