@@ -34,7 +34,7 @@ int main() {
 	a.call(a_function);
 	a.call(a_function);*/
 	//a.mov(regs::rax, 0);
-	a.mov(regs::r13d, regs::r8d+4+regs::eax*4);
+	a.mov(regs::rax+regs::r8*4, regs::r13);
 
 	//a.pop_stack();
 	a.ret();

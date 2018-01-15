@@ -110,7 +110,6 @@ void Assembler::push_r_prefix_index(Register a, Register b) {
 	}
 }
 
-
 void Assembler::generic_bin_op(u8 opcode, Register dst, Register src) {
 	push_r_prefix(dst, src);
 	push(opcode, 0xc0 | (src.r_index() << 3) | dst.r_index());
@@ -219,7 +218,7 @@ void Assembler::mov(Register dst, RegisterIndexOffsetRegister src) {
 	if(!src.reg().is_64()) {
 		push(0x67);
 	}
-	//push_r_prefix_index(src.reg(), dst);
+	//push_r_prefix_index_offset(src.reg(), dst);
 	{
 		bool is_64 = dst.is_64();
 		if(src.reg().is_r() || dst.is_r() || is_64) {
@@ -236,7 +235,24 @@ void Assembler::mov(Register dst, RegisterIndexOffsetRegister src) {
 }
 
 void Assembler::mov(RegisterIndexOffsetRegister dst, Register src) {
-	fatal("!");
+	// 64 bits = ok
+	if(!dst.reg().is_64()) {
+		push(0x67);
+	}
+	//push_r_prefix_index_offset(src.reg(), dst);
+	{
+		bool is_64 = src.is_64();
+		if(dst.reg().is_r() || src.is_r() || is_64) {
+			u8 opcode = 0x40 | (is_64 << 3);
+			push(opcode | (src.is_r() << 2) | (dst.reg().is_r() << 1) | dst.offset().reg().is_r());
+		}
+	}
+	bool fixed_offset = dst.has_fixed_offset();
+	push(0x89, 0x04 | (fixed_offset << 6) | (src.r_index() << 3));
+	push((dst.size() << 5) | (dst.reg().r_index() << 3) | dst.offset().reg().r_index());
+	if(fixed_offset) {
+		push(dst.fixed_offset());
+	}
 }
 
 void Assembler::add(Register dst, Register src) {
