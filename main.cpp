@@ -26,15 +26,17 @@ __cdecl void a_function() {
 int main() {
 
 	Assembler a;
-	a.push_stack();
+	//a.push_stack();
 
+	/*a.call(a_function);
 	a.call(a_function);
 	a.call(a_function);
 	a.call(a_function);
-	a.call(a_function);
-	a.call(a_function);
+	a.call(a_function);*/
+	//a.mov(regs::rax, 0);
+	a.mov(regs::r13d, regs::r8d+4+regs::eax*4);
 
-	a.pop_stack();
+	//a.pop_stack();
 	a.ret();
 
 
@@ -44,7 +46,7 @@ int main() {
 	dump(fn);
 
 
-	fn(nullptr);
+	//fn(nullptr);
 	printf("ok\n");
 
 

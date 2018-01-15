@@ -47,6 +47,11 @@ class Assembler
 		void mov(Register dst, i32 value);
 		void mov(Register dst, RegisterOffset src);
 		void mov(RegisterOffset dst, Register src);
+		void mov(Register dst, RegisterIndexOffset src);
+		void mov(RegisterIndexOffset dst, Register src);
+
+		void mov(Register dst, RegisterIndexOffsetRegister src);
+		void mov(RegisterIndexOffsetRegister dst, Register src);
 
 		void add(Register dst, Register src);
 		void add(Register dst, i32 value);
@@ -65,9 +70,9 @@ class Assembler
 		std::vector<u8> _bytes;
 		std::vector<std::pair<u32, u8*>> _calls;
 
-		void push_64_prefix(Register dst);
 		void push_r_prefix(Register dst);
 		void push_r_prefix(Register a, Register b);
+		void push_r_prefix_index(Register a, Register b);
 
 		void generic_bin_op(u8 opcode, Register dst, Register src);
 		void generic_bin_op(u8 opcode, Register dst, i32 value);

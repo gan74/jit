@@ -26,11 +26,12 @@ SOFTWARE.
 
 // mainly from https://github.com/t0rakka/realtime/blob/master/source/register.hpp
 
+// eax
 class Register {
 	public:
 		explicit Register(u32 index, u8 bits = 32) : _data(index + (bits << 4)) {
 			if (bits != 32 && bits != 64) {
-				fatal("Unsupported");
+				fatal("Unsupported.");
 			}
 		}
 
@@ -65,7 +66,34 @@ class Register {
 		u32 _data;
 };
 
+// [eax*4]
+class RegisterIndex {
+	public:
+		RegisterIndex(Register reg, u8 size) : _reg(reg), _size(size) {
+			if(size != 2 && size != 4 && size != 8) {
+				fatal("Unsupported.");
+			}
+		}
 
+		u8 size() const {
+			return _size;
+		}
+
+		Register reg() const {
+			return _reg;
+		}
+
+	private:
+		Register _reg;
+		u8 _size;
+};
+
+inline RegisterIndex operator*(Register reg, u8 size) {
+	return RegisterIndex(reg, size);
+}
+
+
+// [eax+0x165434]
 class RegisterOffset {
 	public:
 		RegisterOffset(Register reg, u32 offset) : _reg(reg), _offset(offset) {
@@ -75,7 +103,7 @@ class RegisterOffset {
 			return _offset;
 		}
 
-		Register reg() {
+		Register reg() const {
 			return _reg;
 		}
 
@@ -91,6 +119,92 @@ inline RegisterOffset operator+(Register reg, i32 offset) {
 inline RegisterOffset operator-(Register reg, i32 offset) {
 	return RegisterOffset(reg, u32(-offset));
 }
+
+// [eax*4+0x165434]
+class RegisterIndexOffset {
+	public:
+		RegisterIndexOffset(RegisterIndex reg, u32 offset = 0) : _reg(reg), _offset(offset) {
+		}
+
+		u32 offset() const {
+			return _offset;
+		}
+
+		u8 size() const {
+			return _reg.size();
+		}
+
+		Register reg() const {
+			return _reg.reg();
+		}
+
+	private:
+		RegisterIndex _reg;
+		u32 _offset;
+};
+
+inline RegisterIndexOffset operator+(RegisterIndex reg, i32 offset) {
+	return RegisterIndexOffset(reg, u32(offset));
+}
+
+inline RegisterIndexOffset operator-(RegisterIndex reg, i32 offset) {
+	return RegisterIndexOffset(reg, u32(-offset));
+}
+
+// [eax*4+ecx]
+class RegisterIndexOffsetRegister {
+	public:
+		RegisterIndexOffsetRegister(RegisterIndex reg, RegisterOffset offset) : _reg(reg), _offset(offset) {
+			if(_reg.reg().bits() != _offset.reg().bits()) {
+				fatal("Unsupported.");
+			}
+			if(!is_8_bits(_offset.offset())) {
+				fatal("Unsupported.");
+			}
+		}
+
+		bool has_fixed_offset() const {
+			return _offset.reg().index() > 12 || _offset.offset() != 0;
+		}
+
+		u8 fixed_offset() const {
+			return _offset.offset();
+		}
+
+		RegisterOffset offset() const {
+			return _offset;
+		}
+
+		u8 size() const {
+			return _reg.size();
+		}
+
+		Register reg() {
+			return _reg.reg();
+		}
+
+
+	private:
+		RegisterIndex _reg;
+		RegisterOffset _offset;
+};
+
+inline RegisterIndexOffsetRegister operator+(RegisterIndex reg, Register offset) {
+	return RegisterIndexOffsetRegister(reg, RegisterOffset(offset, 0));
+}
+
+inline RegisterIndexOffsetRegister operator+(RegisterIndex reg, RegisterOffset offset) {
+	return RegisterIndexOffsetRegister(reg, offset);
+}
+
+inline RegisterIndexOffsetRegister operator+(Register offset, RegisterIndex reg) {
+	return RegisterIndexOffsetRegister(reg, RegisterOffset(offset, 0));
+}
+
+inline RegisterIndexOffsetRegister operator+(RegisterOffset offset, RegisterIndex reg) {
+	return RegisterIndexOffsetRegister(reg, offset);
+}
+
 
 namespace regs {
 static Register eax  = Register(0);

@@ -24,6 +24,11 @@ SOFTWARE.
 
 #include <cstdio>
 
+
+bool is_8_bits(i32 x) {
+	return i8(x) == x;
+}
+
 void fatal(const char* msg) {
 	printf(msg);
 	printf("\n");
