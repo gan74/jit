@@ -76,15 +76,22 @@ class Assembler
 
 		void set_zero(Register dst);
 
+
 		void mov(Register dst, Register src);
 		void mov(Register dst, i32 value);
-		void mov(Register dst, RegisterOffset src);
-		void mov(RegisterOffset dst, Register src);
-		void mov(Register dst, RegisterIndexOffset src);
-		void mov(RegisterIndexOffset dst, Register src);
 
-		void mov(Register dst, RegisterIndexOffsetRegister src);
+		void mov(RegisterOffset dst, Register src);
+		void mov(RegisterIndexOffset dst, Register src);
 		void mov(RegisterIndexOffsetRegister dst, Register src);
+
+		void mov(Register dst, RegisterOffset src);
+		void mov(Register dst, RegisterIndexOffset src);
+		void mov(Register dst, RegisterIndexOffsetRegister src);
+
+		void lea(Register dst, RegisterOffset src);
+		void lea(Register dst, RegisterIndexOffset src);
+		void lea(Register dst, RegisterIndexOffsetRegister src);
+
 
 		void add(Register dst, Register src);
 		void add(Register dst, i32 value);

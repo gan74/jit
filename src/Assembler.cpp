@@ -215,30 +215,44 @@ void Assembler::mov(Register dst, i32 value) {
 	}
 }
 
-void Assembler::mov(Register dst, RegisterOffset src) {
-	compute_address(0x8b, dst, src);
-}
 
 void Assembler::mov(RegisterOffset dst, Register src) {
 	compute_address(0x89, src, dst);
-}
-
-void Assembler::mov(Register dst, RegisterIndexOffset src) {
-	compute_address(0x8b, dst, src);
 }
 
 void Assembler::mov(RegisterIndexOffset dst, Register src) {
 	compute_address(0x89, src, dst);
 }
 
-void Assembler::mov(Register dst, RegisterIndexOffsetRegister src) {
-	compute_address(0x8b, dst, src);
-}
-
 void Assembler::mov(RegisterIndexOffsetRegister dst, Register src) {
 	compute_address(0x89, src, dst);
 }
 
+
+void Assembler::mov(Register dst, RegisterOffset src) {
+	compute_address(0x8b, dst, src);
+}
+
+void Assembler::mov(Register dst, RegisterIndexOffset src) {
+	compute_address(0x8b, dst, src);
+}
+
+void Assembler::mov(Register dst, RegisterIndexOffsetRegister src) {
+	compute_address(0x8b, dst, src);
+}
+
+
+void Assembler::lea(Register dst, RegisterOffset src) {
+	compute_address(0x8d, dst, src);
+}
+
+void Assembler::lea(Register dst, RegisterIndexOffset src) {
+	compute_address(0x8d, dst, src);
+}
+
+void Assembler::lea(Register dst, RegisterIndexOffsetRegister src) {
+	compute_address(0x8d, dst, src);
+}
 
 
 

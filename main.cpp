@@ -44,7 +44,10 @@ int main() {
 	auto loop = a.label();
 	a.cmp(regs::rax, regs::edx);
 	auto f = a.je();
-	a.mov(regs::r10d, regs::rcx+regs::rax*4);
+	//a.mov(regs::r10d, regs::rcx+regs::rax*4);
+	a.lea(regs::r10, regs::rcx+regs::rax*4);
+	a.mov(regs::r10d, regs::r10+0);
+
 	a.add(regs::r10d, 1);
 	a.mov(regs::rcx+regs::rax*4, regs::r10d);
 	a.add(regs::rax, 1);
@@ -62,7 +65,7 @@ int main() {
 
 	i32 buffer[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-	//fn(buffer + 2, 5);
+	fn(buffer + 2, 5);
 
 	for(i32 i : buffer) {
 		printf("%i ", i);
