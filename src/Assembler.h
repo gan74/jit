@@ -54,6 +54,10 @@ class Assembler
 				void operator=(Assembler& a) const {
 					a.forward_label(_index);
 				}
+
+				operator Label() const {
+					return Label(_index);
+				}
 		};
 
 		Assembler();
@@ -90,6 +94,10 @@ class Assembler
 
 		void jne(Label to);
 		ForwardLabel jne();
+
+		void jmp(Label to);
+		ForwardLabel jmp();
+
 
 		void call(Register fn);
 		void call(void* fn_ptr);

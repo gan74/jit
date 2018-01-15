@@ -148,16 +148,13 @@ void Assembler::mov(Register dst, Register src) {
 
 void Assembler::mov(Register dst, i32 value) {
 	// 64 bits = ok
-	if(dst.is_64() && !dst.is_r()) {
-		push(0x48);
-	}
 	push_r_prefix(dst);
-	push(0xb8 | dst.r_index());
-	push_i32(value);
-	// TODO: use instruction for 32 bit payloads
 	if(dst.is_64()) {
-		push_i32(0);
+		push(0xc7, 0xc0 | dst.r_index());
+	} else {
+		push(0xb8 | dst.r_index());
 	}
+	push_i32(value);
 }
 
 void Assembler::mov(Register dst, RegisterOffset src) {
@@ -189,13 +186,6 @@ void Assembler::mov(Register dst, RegisterIndexOffset src) {
 		push(0x67);
 	}
 	push_r_prefix_index(src.reg(), dst);
-	/*{
-		bool is_64 = dst.is_64();
-		if(src.reg().is_r() || dst.is_r() || is_64) {
-			u8 opcode = 0x40 | (is_64 << 3);
-			push(opcode | (dst.is_r() << 2) | (src.reg().is_r() << 1));
-		}
-	}*/
 	push(0x8b, 0x04 | (dst.r_index() << 3), 0x05 | (src.size() << 5) | (src.reg().r_index() << 3));
 	push_i32(src.offset());
 }
@@ -206,13 +196,6 @@ void Assembler::mov(RegisterIndexOffset dst, Register src) {
 		push(0x67);
 	}
 	push_r_prefix_index(dst.reg(), src);
-	/*{
-		bool is_64 = src.is_64();
-		if(dst.reg().is_r() || src.is_r() || is_64) {
-			u8 opcode = 0x40 | (is_64 << 3);
-			push(opcode | (src.is_r() << 2) | (dst.reg().is_r() << 1));
-		}
-	}*/
 	push(0x89, 0x04 | (src.r_index() << 3), 0x05 | (dst.size() << 5) | (dst.reg().r_index() << 3));
 	push_i32(dst.offset());
 }
@@ -292,6 +275,7 @@ void Assembler::cmp(Register a, Register b) {
 
 
 void Assembler::je(Label to) {
+	// maybe use short jumps for 8 bits diffs
 	push(0x0f, 0x84);
 	push_i32(to - label() - 4);
 }
@@ -317,6 +301,23 @@ Assembler::ForwardLabel Assembler::jne() {
 	push_i32(0);
 	return l;
 }
+
+
+
+
+void Assembler::jmp(Label to) {
+	push(0xe9);
+	push_i32(to - label() - 4);
+}
+
+Assembler::ForwardLabel Assembler::jmp() {
+	push(0xe9);
+	ForwardLabel l = label();
+	push_i32(0);
+	return l;
+}
+
+
 
 
 

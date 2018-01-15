@@ -34,29 +34,36 @@ int main() {
 	Assembler a;
 	a.push_stack();
 
-
-	a.cmp(regs::eax, regs::eax);
-	auto f = a.je();
+	// first arg in rcx, second in edx
+	// counter in rax
+	a.mov(regs::rax, 0);
 	auto loop = a.label();
-	a.call(counter);
-	a.mov(regs::ecx, 4);
-	a.cmp(regs::eax, regs::ecx);
-	a.jne(loop);
+	a.cmp(regs::rax, regs::edx);
+	auto f = a.je();
+	a.mov(regs::r10d, regs::rcx+regs::rax*4);
+	a.add(regs::r10d, 1);
+	a.mov(regs::rcx+regs::rax*4, regs::r10d);
+	a.add(regs::rax, 1);
+	a.jmp(loop);
 	f = a;
-
 
 	a.pop_stack();
 	a.ret();
 
 
 
-	auto fn = a.compile<void>();
+	auto fn = a.compile<void, i32*, i32>();
 
 	dump(fn);
 
+	i32 buffer[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-	fn();
-	printf("ok\n");
+	fn(buffer + 2, 5);
+
+	for(i32 i : buffer) {
+		printf("%i ", i);
+	}
+	printf("\nok\n");
 
 
 
