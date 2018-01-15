@@ -74,6 +74,8 @@ class Assembler
 
 		void nop();
 
+		void set_zero(Register dst);
+
 		void mov(Register dst, Register src);
 		void mov(Register dst, i32 value);
 		void mov(Register dst, RegisterOffset src);
@@ -86,6 +88,10 @@ class Assembler
 
 		void add(Register dst, Register src);
 		void add(Register dst, i32 value);
+
+		void inc(Register dst);
+
+		void xor_(Register dst, Register src);
 
 		void cmp(Register a, Register b);
 

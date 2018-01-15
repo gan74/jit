@@ -66,26 +66,6 @@ void* Assembler::alloc_compile() const {
 
 
 
-void Assembler::push_stack() {
-	// push   %rbp
-	push(0x55);
-	// mov    %rsp,%rbp
-	push(0x48, 0x89, 0xe5);
-}
-
-void Assembler::pop_stack() {
-	// pop    %rbp
-	push(0x5d);
-}
-
-void Assembler::ret() {
-	push(0xc3);
-}
-
-void Assembler::nop() {
-	push(0x90);
-}
-
 
 
 void Assembler::forward_label(u32 label) {
@@ -140,6 +120,37 @@ void Assembler::push_offset(u8 indexes, u32 offset) {
 
 
 
+
+void Assembler::push_stack() {
+	// push   %rbp
+	push(0x55);
+	// mov    %rsp,%rbp
+	push(0x48, 0x89, 0xe5);
+}
+
+void Assembler::pop_stack() {
+	// pop    %rbp
+	push(0x5d);
+}
+
+void Assembler::ret() {
+	push(0xc3);
+}
+
+void Assembler::nop() {
+	push(0x90);
+}
+
+
+
+
+void Assembler::set_zero(Register dst) {
+	// https://stackoverflow.com/a/33668295/3496382
+	Register dst_32(dst.index());
+	xor_(dst_32, dst_32);
+}
+
+
 void Assembler::mov(Register dst, Register src) {
 	// 64 bits = ok
 	check_bits(dst, src);
@@ -148,13 +159,17 @@ void Assembler::mov(Register dst, Register src) {
 
 void Assembler::mov(Register dst, i32 value) {
 	// 64 bits = ok
-	push_r_prefix(dst);
-	if(dst.is_64()) {
-		push(0xc7, 0xc0 | dst.r_index());
+	if(value) {
+		push_r_prefix(dst);
+		if(dst.is_64()) {
+			push(0xc7, 0xc0 | dst.r_index());
+		} else {
+			push(0xb8 | dst.r_index());
+		}
+		push_i32(value);
 	} else {
-		push(0xb8 | dst.r_index());
+		set_zero(dst);
 	}
-	push_i32(value);
 }
 
 void Assembler::mov(Register dst, RegisterOffset src) {
@@ -253,15 +268,36 @@ void Assembler::add(Register dst, Register src) {
 
 void Assembler::add(Register dst, i32 value) {
 	// 64 bits = ok
-	if(dst == regs::rax) {
-		push(0x48, 0x05);
-		push_i32(value);
-	} else if(dst == regs::eax) {
-		push(0x05);
-		push_i32(value);
+	if(value == 1) {
+		inc(dst);
 	} else {
-		generic_bin_op(0x81, dst, value);
+		if(dst == regs::rax) {
+			push(0x48, 0x05);
+			push_i32(value);
+		} else if(dst == regs::eax) {
+			push(0x05);
+			push_i32(value);
+		} else {
+			generic_bin_op(0x81, dst, value);
+		}
 	}
+}
+
+
+
+
+void Assembler::inc(Register dst) {
+	push_r_prefix(dst);
+	push(0xff, 0xc0 | dst.r_index());
+}
+
+
+
+
+void Assembler::xor_(Register dst, Register src) {
+	// 64 bits = ok
+	check_bits(dst, src);
+	generic_bin_op(0x31, dst, src);
 }
 
 
@@ -275,9 +311,13 @@ void Assembler::cmp(Register a, Register b) {
 
 
 void Assembler::je(Label to) {
-	// maybe use short jumps for 8 bits diffs
-	push(0x0f, 0x84);
-	push_i32(to - label() - 4);
+	i32 diff = to - label() - 2;
+	if(false && is_8_bits(diff)) {
+		push(0x74, u8(diff));
+	} else {
+		push(0x0f, 0x84);
+		push_i32(diff - 4);
+	}
 }
 
 Assembler::ForwardLabel Assembler::je() {
@@ -291,8 +331,13 @@ Assembler::ForwardLabel Assembler::je() {
 
 
 void Assembler::jne(Label to) {
-	push(0x0f, 0x85);
-	push_i32(to - label() - 4);
+	i32 diff = to - label() - 2;
+	if(is_8_bits(diff)) {
+		push(0x75, u8(diff));
+	} else {
+		push(0x0f, 0x85);
+		push_i32(diff - 4);
+	}
 }
 
 Assembler::ForwardLabel Assembler::jne() {
@@ -306,8 +351,13 @@ Assembler::ForwardLabel Assembler::jne() {
 
 
 void Assembler::jmp(Label to) {
-	push(0xe9);
-	push_i32(to - label() - 4);
+	i32 diff = to - label() - 2;
+	if(is_8_bits(diff)) {
+		push(0xeb, u8(diff));
+	} else {
+		push(0xe9);
+		push_i32(diff - 3);
+	}
 }
 
 Assembler::ForwardLabel Assembler::jmp() {

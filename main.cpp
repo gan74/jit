@@ -29,10 +29,14 @@ __cdecl i32 counter() {
 	return c++;
 }
 
+
+// https://defuse.ca/online-x86-assembler.htm
+
 int main() {
 
 	Assembler a;
 	a.push_stack();
+
 
 	// first arg in rcx, second in edx
 	// counter in rax
@@ -58,7 +62,7 @@ int main() {
 
 	i32 buffer[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-	fn(buffer + 2, 5);
+	//fn(buffer + 2, 5);
 
 	for(i32 i : buffer) {
 		printf("%i ", i);

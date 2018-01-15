@@ -48,8 +48,6 @@ class Register {
 			return _data & 0x7;
 		}
 
-
-
 		bool is_r() const {
 			return (_data & 0x0008) != 0;
 		}

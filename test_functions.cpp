@@ -46,36 +46,6 @@ __cdecl void test_loop(i32 i) {
 	while(i != 0) {
         test_empty();
         test_empty();
-        test_empty();
-        test_empty();
-        test_empty();
-        test_empty();
-        test_empty();
-        test_empty();
-        test_empty();
-        test_empty();
-        test_empty();
-        test_empty();
-        test_empty();
-        test_empty();
-        test_empty();
-        test_empty();
-        test_empty();
-        test_empty();
-        test_empty();
-        test_empty();
-        test_empty();
-        test_empty();
-        test_empty();
-        test_empty();
-        test_empty();
-        test_empty();
-        test_empty();
-        test_empty();
-        test_empty();
-        test_empty();
-        test_empty();
-        test_empty();
         --i;
     }
 }
