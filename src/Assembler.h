@@ -41,6 +41,8 @@ class Assembler
 		void pop_stack();
 		void ret();
 
+		void nop();
+
 		void mov(Register dst, Register src);
 		void mov(Register dst, i32 value);
 		void mov(Register dst, RegisterOffset src);
@@ -49,12 +51,19 @@ class Assembler
 		void add(Register dst, Register src);
 		void add(Register dst, i32 value);
 
-		void arg_to_eax(u8 arg_index);
+		void call(Register fn);
+		void call(void* fn_ptr);
+
+		template<typename R, typename... Args>
+		void call(Fn<R, Args...> fn_ptr) {
+			call(reinterpret_cast<void*>(fn_ptr));
+		}
 
 		void dump() const;
 
 	private:
 		std::vector<u8> _bytes;
+		std::vector<std::pair<u32, u8*>> _calls;
 
 		void push_64_prefix(Register dst);
 		void push_r_prefix(Register dst);

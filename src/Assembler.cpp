@@ -22,8 +22,6 @@ SOFTWARE.
 #include "Assembler.h"
 
 
-#include <cstdio>
-
 #ifdef __WIN32
 #define WIN32_ASSEMBLER
 #include <windows.h>
@@ -43,19 +41,19 @@ void check_bits(Register a, Register b) {
 Assembler::Assembler() {
 }
 
-
-void Assembler::dump() const {
-	for(u8 b : _bytes) {
-		printf("%02x ", b);
-	}
-	printf("\n");
-}
-
 void* Assembler::alloc_compile() const {
 #ifdef WIN32_ASSEMBLER
 	static constexpr size_t page_size = 4096;
+
 	void* buffer = VirtualAlloc(nullptr, page_size, MEM_COMMIT, PAGE_READWRITE);
 	std::memcpy(buffer, _bytes.data(), _bytes.size());
+
+	for(const auto& call : _calls) {
+		u8* addr = reinterpret_cast<u8*>(buffer) + call.first;
+		auto diff = call.second - addr;
+		*reinterpret_cast<u32*>(addr) = u32(diff) - 4; // wat ?
+	}
+
 	DWORD res = 0;
 	VirtualProtect(buffer, _bytes.size(), PAGE_EXECUTE_READ, &res);
 	return buffer;
@@ -82,6 +80,10 @@ void Assembler::pop_stack() {
 
 void Assembler::ret() {
 	push(0xc3);
+}
+
+void Assembler::nop() {
+	push(0x90);
 }
 
 
@@ -189,6 +191,19 @@ void Assembler::add(Register dst, i32 value) {
 }
 
 
+void Assembler::call(Register fn) {
+	check_bits(fn, 64);
+	if(fn.is_r()) {
+		push(0x41);
+	}
+	push(0xff, 0xd0 | fn.r_index());
+}
+
+void Assembler::call(void* fn_ptr) {
+	push(0xe8);
+	_calls.push_back({_bytes.size(), reinterpret_cast<u8*>(fn_ptr)});
+	push_i32(0);
+}
 
 
 

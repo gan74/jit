@@ -22,13 +22,24 @@ SOFTWARE.
 
 #include "src/utils.h"
 
-__cdecl i32 test(i32, i32, i32 x, i32, i32) {
+__cdecl i32 test(i32, i32, i32 x, i32, i32, i32) {
 	return x;
+}
+
+__cdecl i64 test64(i64, i64, i64 x, i64, i64, i64) {
+	return x;
+}
+
+__cdecl i64 test_mixed(i64, i32, i64 x, i32, i32, i64) {
+	return x;
+}
+__cdecl void test_call(Fn<void> f) {
+	f();
 }
 
 
 
 int main() {
-	test(0, 1, 2, 3, 4);
+	test64(0, 1, 2, 3, 4, 5);
 	return 0;
 }
