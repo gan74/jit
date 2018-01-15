@@ -117,6 +117,47 @@ void Assembler::push_offset(u8 indexes, u32 offset) {
 	}
 }
 
+void Assembler::compute_address(u8 opcode, Register dst, RegisterOffset src) {
+	// 64 bits = ok
+	if(!src.reg().is_64()) {
+		push(0x67);
+	}
+	push_r_prefix(src.reg(), dst);
+	push(opcode);
+	u8 indexes = (dst.r_index() << 3) | src.reg().r_index();
+	push_offset(indexes, src.offset());
+}
+
+void Assembler::compute_address(u8 opcode, Register dst, RegisterIndexOffset src) {
+	// 64 bits = ok
+	if(!src.reg().is_64()) {
+		push(0x67);
+	}
+	push_r_prefix_index(src.reg(), dst);
+	push(opcode, 0x04 | (dst.r_index() << 3), 0x05 | (src.size() << 5) | (src.reg().r_index() << 3));
+	push_i32(src.offset());
+}
+
+void Assembler::compute_address(u8 opcode, Register dst, RegisterIndexOffsetRegister src) {
+	// 64 bits = ok
+	if(!src.reg().is_64()) {
+		push(0x67);
+	}
+	//push_r_prefix_index_offset(src.reg(), dst);
+	{
+		bool is_64 = dst.is_64();
+		if(src.reg().is_r() || dst.is_r() || is_64) {
+			u8 opcode = 0x40 | (is_64 << 3);
+			push(opcode | (dst.is_r() << 2) | (src.reg().is_r() << 1) | src.offset().reg().is_r());
+		}
+	}
+	bool fixed_offset = src.has_fixed_offset();
+	push(opcode, 0x04 | (fixed_offset << 6) | (dst.r_index() << 3));
+	push((src.size() << 5) | (src.reg().r_index() << 3) | src.offset().reg().r_index());
+	if(fixed_offset) {
+		push(src.fixed_offset());
+	}
+}
 
 
 
@@ -151,6 +192,8 @@ void Assembler::set_zero(Register dst) {
 }
 
 
+
+
 void Assembler::mov(Register dst, Register src) {
 	// 64 bits = ok
 	check_bits(dst, src);
@@ -173,88 +216,27 @@ void Assembler::mov(Register dst, i32 value) {
 }
 
 void Assembler::mov(Register dst, RegisterOffset src) {
-	// 64 bits = ok
-	if(!src.reg().is_64()) {
-		push(0x67);
-	}
-	push_r_prefix(src.reg(), dst);
-	push(0x8b);
-	u8 indexes = (dst.r_index() << 3) | src.reg().r_index();
-	push_offset(indexes, src.offset());
-
+	compute_address(0x8b, dst, src);
 }
 
 void Assembler::mov(RegisterOffset dst, Register src) {
-	// 64 bits = ok
-	if(!dst.reg().is_64()) {
-		push(0x67);
-	}
-	push_r_prefix(dst.reg(), src);
-	push(0x89);
-	u8 indexes = (src.r_index() << 3) | dst.reg().r_index();
-	push_offset(indexes, dst.offset());
+	compute_address(0x89, src, dst);
 }
 
 void Assembler::mov(Register dst, RegisterIndexOffset src) {
-	// 64 bits = ok
-	if(!src.reg().is_64()) {
-		push(0x67);
-	}
-	push_r_prefix_index(src.reg(), dst);
-	push(0x8b, 0x04 | (dst.r_index() << 3), 0x05 | (src.size() << 5) | (src.reg().r_index() << 3));
-	push_i32(src.offset());
+	compute_address(0x8b, dst, src);
 }
 
 void Assembler::mov(RegisterIndexOffset dst, Register src) {
-	// 64 bits = ok
-	if(!dst.reg().is_64()) {
-		push(0x67);
-	}
-	push_r_prefix_index(dst.reg(), src);
-	push(0x89, 0x04 | (src.r_index() << 3), 0x05 | (dst.size() << 5) | (dst.reg().r_index() << 3));
-	push_i32(dst.offset());
+	compute_address(0x89, src, dst);
 }
 
 void Assembler::mov(Register dst, RegisterIndexOffsetRegister src) {
-	// 64 bits = ok
-	if(!src.reg().is_64()) {
-		push(0x67);
-	}
-	//push_r_prefix_index_offset(src.reg(), dst);
-	{
-		bool is_64 = dst.is_64();
-		if(src.reg().is_r() || dst.is_r() || is_64) {
-			u8 opcode = 0x40 | (is_64 << 3);
-			push(opcode | (dst.is_r() << 2) | (src.reg().is_r() << 1) | src.offset().reg().is_r());
-		}
-	}
-	bool fixed_offset = src.has_fixed_offset();
-	push(0x8b, 0x04 | (fixed_offset << 6) | (dst.r_index() << 3));
-	push((src.size() << 5) | (src.reg().r_index() << 3) | src.offset().reg().r_index());
-	if(fixed_offset) {
-		push(src.fixed_offset());
-	}
+	compute_address(0x8b, dst, src);
 }
 
 void Assembler::mov(RegisterIndexOffsetRegister dst, Register src) {
-	// 64 bits = ok
-	if(!dst.reg().is_64()) {
-		push(0x67);
-	}
-	//push_r_prefix_index_offset(src.reg(), dst);
-	{
-		bool is_64 = src.is_64();
-		if(dst.reg().is_r() || src.is_r() || is_64) {
-			u8 opcode = 0x40 | (is_64 << 3);
-			push(opcode | (src.is_r() << 2) | (dst.reg().is_r() << 1) | dst.offset().reg().is_r());
-		}
-	}
-	bool fixed_offset = dst.has_fixed_offset();
-	push(0x89, 0x04 | (fixed_offset << 6) | (src.r_index() << 3));
-	push((dst.size() << 5) | (dst.reg().r_index() << 3) | dst.offset().reg().r_index());
-	if(fixed_offset) {
-		push(dst.fixed_offset());
-	}
+	compute_address(0x89, src, dst);
 }
 
 

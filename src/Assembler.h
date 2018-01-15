@@ -135,6 +135,11 @@ class Assembler
 
 		void push_offset(u8 indexes, u32 offset);
 
+		void compute_address(u8 opcode, Register dst, RegisterOffset src);
+		void compute_address(u8 opcode, Register dst, RegisterIndexOffset src);
+		void compute_address(u8 opcode, Register dst, RegisterIndexOffsetRegister src);
+
+
 		void* alloc_compile() const;
 
 
