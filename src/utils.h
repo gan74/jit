@@ -36,6 +36,8 @@ using i16 = std::int16_t;
 using i32 = std::int32_t;
 using i64 = std::int64_t;
 
+using usize = std::size_t;
+
 bool is_8_bits(i32 x);
 
 void fatal(const char* msg);

@@ -22,6 +22,10 @@ SOFTWARE.
 
 #include "src/utils.h"
 
+__cdecl void test_empty() {
+    
+}
+
 __cdecl i32 test(i32, i32, i32 x, i32, i32, i32) {
 	return x;
 }
@@ -37,6 +41,44 @@ __cdecl void test_call(Fn<void> f) {
 	f();
 }
 
+__cdecl void test_loop(i32 i) {
+        
+	while(i != 0) {
+        test_empty();
+        test_empty();
+        test_empty();
+        test_empty();
+        test_empty();
+        test_empty();
+        test_empty();
+        test_empty();
+        test_empty();
+        test_empty();
+        test_empty();
+        test_empty();
+        test_empty();
+        test_empty();
+        test_empty();
+        test_empty();
+        test_empty();
+        test_empty();
+        test_empty();
+        test_empty();
+        test_empty();
+        test_empty();
+        test_empty();
+        test_empty();
+        test_empty();
+        test_empty();
+        test_empty();
+        test_empty();
+        test_empty();
+        test_empty();
+        test_empty();
+        test_empty();
+        --i;
+    }
+}
 
 
 int main() {

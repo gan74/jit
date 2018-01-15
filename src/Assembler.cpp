@@ -49,7 +49,7 @@ void* Assembler::alloc_compile() const {
 	std::memcpy(buffer, _bytes.data(), _bytes.size());
 
 	for(const auto& call : _calls) {
-		u8* addr = reinterpret_cast<u8*>(buffer) + call.first;
+		u8* addr = reinterpret_cast<u8*>(buffer) + call.first._index;
 		auto diff = call.second - addr;
 		*reinterpret_cast<u32*>(addr) = u32(diff) - 4; // wat ?
 	}
@@ -88,6 +88,10 @@ void Assembler::nop() {
 
 
 
+void Assembler::forward_label(u32 label) {
+	u32 diff =  _bytes.size() - label - 4;
+	*reinterpret_cast<u32*>(&_bytes[label]) = diff;
+}
 
 void Assembler::push_r_prefix(Register dst) {
 	if(dst.is_r() || dst.is_64()) {
@@ -132,6 +136,7 @@ void Assembler::push_offset(u8 indexes, u32 offset) {
 		push_i32(offset);
 	}
 }
+
 
 
 
@@ -212,7 +217,6 @@ void Assembler::mov(RegisterIndexOffset dst, Register src) {
 	push_i32(dst.offset());
 }
 
-
 void Assembler::mov(Register dst, RegisterIndexOffsetRegister src) {
 	// 64 bits = ok
 	if(!src.reg().is_64()) {
@@ -255,6 +259,9 @@ void Assembler::mov(RegisterIndexOffsetRegister dst, Register src) {
 	}
 }
 
+
+
+
 void Assembler::add(Register dst, Register src) {
 	// 64 bits = ok
 	check_bits(dst, src);
@@ -275,6 +282,44 @@ void Assembler::add(Register dst, i32 value) {
 }
 
 
+
+
+void Assembler::cmp(Register a, Register b) {
+	generic_bin_op(0x39, a, b);
+}
+
+
+
+
+void Assembler::je(Label to) {
+	push(0x0f, 0x84);
+	push_i32(to - label() - 4);
+}
+
+Assembler::ForwardLabel Assembler::je() {
+	push(0x0f, 0x84);
+	ForwardLabel l = label();
+	push_i32(0);
+	return l;
+}
+
+
+
+
+void Assembler::jne(Label to) {
+	push(0x0f, 0x85);
+	push_i32(to - label() - 4);
+}
+
+Assembler::ForwardLabel Assembler::jne() {
+	push(0x0f, 0x85);
+	ForwardLabel l = label();
+	push_i32(0);
+	return l;
+}
+
+
+
 void Assembler::call(Register fn) {
 	check_bits(fn, 64);
 	if(fn.is_r()) {
@@ -285,11 +330,16 @@ void Assembler::call(Register fn) {
 
 void Assembler::call(void* fn_ptr) {
 	push(0xe8);
-	_calls.push_back({_bytes.size(), reinterpret_cast<u8*>(fn_ptr)});
+	_calls.push_back({label(), reinterpret_cast<u8*>(fn_ptr)});
 	push_i32(0);
 }
 
 
+
+
+Assembler::Label Assembler::label() const {
+	return Label(_bytes.size());
+}
 
 
 

@@ -29,6 +29,33 @@ SOFTWARE.
 class Assembler
 {
 	public:
+		class Label {
+			friend class Assembler;
+
+			i32 operator-(const Label& o) const {
+				return i32(_index - o._index);
+			}
+
+			Label(u32 i) : _index(i) {
+			}
+
+			u32 _index;
+		};
+
+		class ForwardLabel {
+			friend class Assembler;
+
+			ForwardLabel(Label l) : _index(l._index) {
+			}
+
+			u32 _index;
+
+			public:
+				void operator=(Assembler& a) const {
+					a.forward_label(_index);
+				}
+		};
+
 		Assembler();
 
 		template<typename R, typename... Args>
@@ -56,6 +83,14 @@ class Assembler
 		void add(Register dst, Register src);
 		void add(Register dst, i32 value);
 
+		void cmp(Register a, Register b);
+
+		void je(Label to);
+		ForwardLabel je();
+
+		void jne(Label to);
+		ForwardLabel jne();
+
 		void call(Register fn);
 		void call(void* fn_ptr);
 
@@ -64,11 +99,18 @@ class Assembler
 			call(reinterpret_cast<void*>(fn_ptr));
 		}
 
+
+		Label label() const;
+
+
 		void dump() const;
+
 
 	private:
 		std::vector<u8> _bytes;
-		std::vector<std::pair<u32, u8*>> _calls;
+		std::vector<std::pair<Label, u8*>> _calls;
+
+		void forward_label(u32 label);
 
 		void push_r_prefix(Register dst);
 		void push_r_prefix(Register a, Register b);

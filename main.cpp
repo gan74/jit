@@ -23,30 +23,39 @@ __cdecl void a_function() {
 	printf("function called\n");
 }
 
+__cdecl i32 counter() {
+	static i32 c = 0;
+	std::cout << "c = " << c << std::endl;
+	return c++;
+}
+
 int main() {
 
 	Assembler a;
-	//a.push_stack();
+	a.push_stack();
 
-	/*a.call(a_function);
-	a.call(a_function);
-	a.call(a_function);
-	a.call(a_function);
-	a.call(a_function);*/
-	//a.mov(regs::rax, 0);
-	a.mov(regs::rax+regs::r8*4, regs::r13);
 
-	//a.pop_stack();
+	a.cmp(regs::eax, regs::eax);
+	auto f = a.je();
+	auto loop = a.label();
+	a.call(counter);
+	a.mov(regs::ecx, 4);
+	a.cmp(regs::eax, regs::ecx);
+	a.jne(loop);
+	f = a;
+
+
+	a.pop_stack();
 	a.ret();
 
 
 
-	auto fn = a.compile<void, i32*>();
+	auto fn = a.compile<void>();
 
 	dump(fn);
 
 
-	//fn(nullptr);
+	fn();
 	printf("ok\n");
 
 
