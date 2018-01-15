@@ -96,6 +96,15 @@ class Assembler
 		void add(Register dst, Register src);
 		void add(Register dst, i32 value);
 
+		void sub(Register dst, Register src);
+		void sub(Register dst, i32 value);
+
+
+		//void imul(Register b);
+		void imul(Register dst, i32 value);
+		void imul(Register dst, Register src);
+		void imul(Register dst, Register src, i32 value);
+
 		void inc(Register dst);
 
 		void xor_(Register dst, Register src);
@@ -137,8 +146,8 @@ class Assembler
 		void push_r_prefix(Register a, Register b);
 		void push_r_prefix_index(Register a, Register b);
 
-		void generic_bin_op(u8 opcode, Register dst, Register src);
-		void generic_bin_op(u8 opcode, Register dst, i32 value);
+		void generic_bin_op(u8 opcode, Register dst, Register src, u8 base = 0xc0);
+		void generic_bin_op(u8 opcode, Register dst, i32 value, u8 base = 0xc0);
 
 		void push_offset(u8 indexes, u32 offset);
 

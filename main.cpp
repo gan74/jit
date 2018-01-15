@@ -44,7 +44,9 @@ int main() {
 	auto loop = a.label();
 	a.cmp(regs::rax, regs::edx);
 	auto f = a.je();
+
 	//a.mov(regs::r10d, regs::rcx+regs::rax*4);
+
 	a.lea(regs::r10, regs::rcx+regs::rax*4);
 	a.mov(regs::r10d, regs::r10+0);
 

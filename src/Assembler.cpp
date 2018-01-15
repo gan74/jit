@@ -94,15 +94,19 @@ void Assembler::push_r_prefix_index(Register a, Register b) {
 	}
 }
 
-void Assembler::generic_bin_op(u8 opcode, Register dst, Register src) {
+void Assembler::generic_bin_op(u8 opcode, Register dst, Register src, u8 base) {
 	push_r_prefix(dst, src);
-	push(opcode, 0xc0 | (src.r_index() << 3) | dst.r_index());
-
+	push(opcode, base | (src.r_index() << 3) | dst.r_index());
 }
-void Assembler::generic_bin_op(u8 opcode, Register dst, i32 value) {
+
+void Assembler::generic_bin_op(u8 opcode, Register dst, i32 value, u8 base) {
 	push_r_prefix(dst);
-	push(opcode, 0xc0 | dst.r_index());
-	push_i32(value);
+	if(is_8_bits(value)) {
+		push(opcode | 0x02, base | dst.r_index(), value);
+	} else {
+		push(opcode, base | dst.r_index());
+		push_i32(value);
+	}
 }
 
 void Assembler::push_offset(u8 indexes, u32 offset) {
@@ -258,7 +262,7 @@ void Assembler::lea(Register dst, RegisterIndexOffsetRegister src) {
 
 void Assembler::add(Register dst, Register src) {
 	// 64 bits = ok
-	check_bits(dst, src);
+	check_bits(src, dst);
 	generic_bin_op(0x01, dst, src);
 }
 
@@ -266,6 +270,8 @@ void Assembler::add(Register dst, i32 value) {
 	// 64 bits = ok
 	if(value == 1) {
 		inc(dst);
+	} else if(is_8_bits(value)) {
+		generic_bin_op(0x81, dst, value);
 	} else {
 		if(dst == regs::rax) {
 			push(0x48, 0x05);
@@ -282,7 +288,52 @@ void Assembler::add(Register dst, i32 value) {
 
 
 
+void Assembler::sub(Register dst, Register src) {
+	// 64 bits = ok
+	check_bits(src, dst);
+	generic_bin_op(0x29, dst, src);
+}
+
+void Assembler::sub(Register dst, i32 value) {
+	// 64 bits = ok
+	generic_bin_op(0x81, dst, value, 0xe8);
+}
+
+
+
+
+
+
+/*void Assembler::imul(Register b) {
+	// 64 bits = ok
+	push_r_prefix(b);
+	push(0xf7, 0xe8 | b.r_index());
+}*/
+
+void Assembler::imul(Register dst, i32 value) {
+	// 64 bits = ok
+	imul(dst, dst, value);
+}
+
+void Assembler::imul(Register dst, Register src) {
+	// 64 bits = ok
+	check_bits(dst, src);
+	push_r_prefix(src, dst);
+	push(0x0f, 0xaf, 0xc0 | (dst.r_index() << 3) | src.r_index());
+}
+
+void Assembler::imul(Register dst, Register src, i32 value) {
+	check_bits(dst, src);
+	push_r_prefix(src, dst);
+	push(0x69, 0xc0 | (dst.r_index() << 3) | src.r_index());
+	push_i32(value);
+}
+
+
+
+
 void Assembler::inc(Register dst) {
+	// 64 bits = ok
 	push_r_prefix(dst);
 	push(0xff, 0xc0 | dst.r_index());
 }
@@ -300,6 +351,7 @@ void Assembler::xor_(Register dst, Register src) {
 
 
 void Assembler::cmp(Register a, Register b) {
+	// 64 bits = ok
 	generic_bin_op(0x39, a, b);
 }
 
@@ -308,7 +360,7 @@ void Assembler::cmp(Register a, Register b) {
 
 void Assembler::je(Label to) {
 	i32 diff = to - label() - 2;
-	if(false && is_8_bits(diff)) {
+	if(is_8_bits(diff)) {
 		push(0x74, u8(diff));
 	} else {
 		push(0x0f, 0x84);
