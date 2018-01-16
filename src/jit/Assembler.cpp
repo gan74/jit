@@ -22,18 +22,15 @@ SOFTWARE.
 #include "Assembler.h"
 
 
-#ifdef __WIN32
-#define WIN32_ASSEMBLER
-#include <windows.h>
-#endif
+namespace jit {
 
-void check_bits(Register a, u8 bits) {
+static void check_bits(Register a, u8 bits) {
 	if(a.bits() != bits) {
 		fatal("Invalid number of bits");
 	}
 }
 
-void check_bits(Register a, Register b) {
+static void check_bits(Register a, Register b) {
 	check_bits(a, b.bits());
 }
 
@@ -41,11 +38,7 @@ void check_bits(Register a, Register b) {
 Assembler::Assembler() {
 }
 
-void* Assembler::alloc_compile() const {
-#ifdef WIN32_ASSEMBLER
-	static constexpr size_t page_size = 4096;
-
-	void* buffer = VirtualAlloc(nullptr, page_size, MEM_COMMIT, PAGE_READWRITE);
+void* Assembler::copy_compile(void* buffer) const {
 	std::memcpy(buffer, _bytes.data(), _bytes.size());
 
 	for(const auto& call : _calls) {
@@ -54,12 +47,7 @@ void* Assembler::alloc_compile() const {
 		*reinterpret_cast<u32*>(addr) = u32(diff) - 4; // wat ?
 	}
 
-	DWORD res = 0;
-	VirtualProtect(buffer, _bytes.size(), PAGE_EXECUTE_READ, &res);
 	return buffer;
-#else
-#error unsupported OS.
-#endif
 }
 
 
@@ -69,16 +57,16 @@ void* Assembler::alloc_compile() const {
 
 
 void Assembler::forward_label(u32 label) {
-	u32 diff =  _bytes.size() - label - 4;
-	*reinterpret_cast<u32*>(&_bytes[label]) = diff;
+	u32 diff =  _bytes.size() - label;
+	*reinterpret_cast<u32*>(&_bytes[label - 4]) = diff;
 }
 
-void Assembler::push_r_prefix(Register dst) {
+void Assembler::r_prefix(Register dst) {
 	if(dst.is_r() || dst.is_64()) {
 		push(0x40 | (dst.is_64() << 3) | dst.is_r());
 	}
 }
-void Assembler::push_r_prefix(Register a, Register b) {
+void Assembler::r_prefix(Register a, Register b) {
 	bool is_64 = b.is_64();
 	if(a.is_r() || b.is_r() || is_64) {
 		u8 opcode = 0x40 | (is_64 << 3);
@@ -86,7 +74,7 @@ void Assembler::push_r_prefix(Register a, Register b) {
 	}
 }
 
-void Assembler::push_r_prefix_index(Register a, Register b) {
+void Assembler::r_prefix_with_index(Register a, Register b) {
 	bool is_64 = b.is_64();
 	if(a.is_r() || b.is_r() || is_64) {
 		u8 opcode = 0x40 | (is_64 << 3);
@@ -94,13 +82,13 @@ void Assembler::push_r_prefix_index(Register a, Register b) {
 	}
 }
 
-void Assembler::generic_bin_op(u8 opcode, Register dst, Register src, u8 base) {
-	push_r_prefix(dst, src);
+void Assembler::bin_op_instr(u8 opcode, Register dst, Register src, u8 base) {
+	r_prefix(dst, src);
 	push(opcode, base | (src.r_index() << 3) | dst.r_index());
 }
 
-void Assembler::generic_bin_op(u8 opcode, Register dst, i32 value, u8 base) {
-	push_r_prefix(dst);
+void Assembler::bin_op_instr(u8 opcode, Register dst, i32 value, u8 base) {
+	r_prefix(dst);
 	if(is_8_bits(value)) {
 		push(opcode | 0x02, base | dst.r_index(), value);
 	} else {
@@ -109,7 +97,15 @@ void Assembler::generic_bin_op(u8 opcode, Register dst, i32 value, u8 base) {
 	}
 }
 
-void Assembler::push_offset(u8 indexes, u32 offset) {
+void Assembler::addr_instr(u8 opcode, Register dst, RegisterOffset src) {
+	// 64 bits = ok
+	if(!src.reg().is_64()) {
+		push(0x67);
+	}
+	r_prefix(src.reg(), dst);
+	push(opcode);
+	u8 indexes = (dst.r_index() << 3) | src.reg().r_index();
+	u32 offset = src.offset();
 	if (!offset) {
 		push(indexes);
 	} else if(is_8_bits(offset)) {
@@ -121,28 +117,17 @@ void Assembler::push_offset(u8 indexes, u32 offset) {
 	}
 }
 
-void Assembler::compute_address(u8 opcode, Register dst, RegisterOffset src) {
+void Assembler::addr_instr(u8 opcode, Register dst, RegisterIndexOffset src) {
 	// 64 bits = ok
 	if(!src.reg().is_64()) {
 		push(0x67);
 	}
-	push_r_prefix(src.reg(), dst);
-	push(opcode);
-	u8 indexes = (dst.r_index() << 3) | src.reg().r_index();
-	push_offset(indexes, src.offset());
-}
-
-void Assembler::compute_address(u8 opcode, Register dst, RegisterIndexOffset src) {
-	// 64 bits = ok
-	if(!src.reg().is_64()) {
-		push(0x67);
-	}
-	push_r_prefix_index(src.reg(), dst);
+	r_prefix_with_index(src.reg(), dst);
 	push(opcode, 0x04 | (dst.r_index() << 3), 0x05 | (src.size() << 5) | (src.reg().r_index() << 3));
 	push_i32(src.offset());
 }
 
-void Assembler::compute_address(u8 opcode, Register dst, RegisterIndexOffsetRegister src) {
+void Assembler::addr_instr(u8 opcode, Register dst, RegisterIndexOffsetRegister src) {
 	// 64 bits = ok
 	if(!src.reg().is_64()) {
 		push(0x67);
@@ -201,13 +186,13 @@ void Assembler::set_zero(Register dst) {
 void Assembler::mov(Register dst, Register src) {
 	// 64 bits = ok
 	check_bits(dst, src);
-	generic_bin_op(0x89, dst, src);
+	bin_op_instr(0x89, dst, src);
 }
 
 void Assembler::mov(Register dst, i32 value) {
 	// 64 bits = ok
 	if(value) {
-		push_r_prefix(dst);
+		r_prefix(dst);
 		if(dst.is_64()) {
 			push(0xc7, 0xc0 | dst.r_index());
 		} else {
@@ -221,41 +206,41 @@ void Assembler::mov(Register dst, i32 value) {
 
 
 void Assembler::mov(RegisterOffset dst, Register src) {
-	compute_address(0x89, src, dst);
+	addr_instr(0x89, src, dst);
 }
 
 void Assembler::mov(RegisterIndexOffset dst, Register src) {
-	compute_address(0x89, src, dst);
+	addr_instr(0x89, src, dst);
 }
 
 void Assembler::mov(RegisterIndexOffsetRegister dst, Register src) {
-	compute_address(0x89, src, dst);
+	addr_instr(0x89, src, dst);
 }
 
 
 void Assembler::mov(Register dst, RegisterOffset src) {
-	compute_address(0x8b, dst, src);
+	addr_instr(0x8b, dst, src);
 }
 
 void Assembler::mov(Register dst, RegisterIndexOffset src) {
-	compute_address(0x8b, dst, src);
+	addr_instr(0x8b, dst, src);
 }
 
 void Assembler::mov(Register dst, RegisterIndexOffsetRegister src) {
-	compute_address(0x8b, dst, src);
+	addr_instr(0x8b, dst, src);
 }
 
 
 void Assembler::lea(Register dst, RegisterOffset src) {
-	compute_address(0x8d, dst, src);
+	addr_instr(0x8d, dst, src);
 }
 
 void Assembler::lea(Register dst, RegisterIndexOffset src) {
-	compute_address(0x8d, dst, src);
+	addr_instr(0x8d, dst, src);
 }
 
 void Assembler::lea(Register dst, RegisterIndexOffsetRegister src) {
-	compute_address(0x8d, dst, src);
+	addr_instr(0x8d, dst, src);
 }
 
 
@@ -263,7 +248,7 @@ void Assembler::lea(Register dst, RegisterIndexOffsetRegister src) {
 void Assembler::add(Register dst, Register src) {
 	// 64 bits = ok
 	check_bits(src, dst);
-	generic_bin_op(0x01, dst, src);
+	bin_op_instr(0x01, dst, src);
 }
 
 void Assembler::add(Register dst, i32 value) {
@@ -271,7 +256,7 @@ void Assembler::add(Register dst, i32 value) {
 	if(value == 1) {
 		inc(dst);
 	} else if(is_8_bits(value)) {
-		generic_bin_op(0x81, dst, value);
+		bin_op_instr(0x81, dst, value);
 	} else {
 		if(dst == regs::rax) {
 			push(0x48, 0x05);
@@ -280,7 +265,7 @@ void Assembler::add(Register dst, i32 value) {
 			push(0x05);
 			push_i32(value);
 		} else {
-			generic_bin_op(0x81, dst, value);
+			bin_op_instr(0x81, dst, value);
 		}
 	}
 }
@@ -291,12 +276,12 @@ void Assembler::add(Register dst, i32 value) {
 void Assembler::sub(Register dst, Register src) {
 	// 64 bits = ok
 	check_bits(src, dst);
-	generic_bin_op(0x29, dst, src);
+	bin_op_instr(0x29, dst, src);
 }
 
 void Assembler::sub(Register dst, i32 value) {
 	// 64 bits = ok
-	generic_bin_op(0x81, dst, value, 0xe8);
+	bin_op_instr(0x81, dst, value, 0xe8);
 }
 
 
@@ -318,13 +303,13 @@ void Assembler::imul(Register dst, i32 value) {
 void Assembler::imul(Register dst, Register src) {
 	// 64 bits = ok
 	check_bits(dst, src);
-	push_r_prefix(src, dst);
+	r_prefix(src, dst);
 	push(0x0f, 0xaf, 0xc0 | (dst.r_index() << 3) | src.r_index());
 }
 
 void Assembler::imul(Register dst, Register src, i32 value) {
 	check_bits(dst, src);
-	push_r_prefix(src, dst);
+	r_prefix(src, dst);
 	push(0x69, 0xc0 | (dst.r_index() << 3) | src.r_index());
 	push_i32(value);
 }
@@ -334,7 +319,7 @@ void Assembler::imul(Register dst, Register src, i32 value) {
 
 void Assembler::inc(Register dst) {
 	// 64 bits = ok
-	push_r_prefix(dst);
+	r_prefix(dst);
 	push(0xff, 0xc0 | dst.r_index());
 }
 
@@ -344,7 +329,7 @@ void Assembler::inc(Register dst) {
 void Assembler::xor_(Register dst, Register src) {
 	// 64 bits = ok
 	check_bits(dst, src);
-	generic_bin_op(0x31, dst, src);
+	bin_op_instr(0x31, dst, src);
 }
 
 
@@ -352,7 +337,7 @@ void Assembler::xor_(Register dst, Register src) {
 
 void Assembler::cmp(Register a, Register b) {
 	// 64 bits = ok
-	generic_bin_op(0x39, a, b);
+	bin_op_instr(0x39, a, b);
 }
 
 
@@ -370,9 +355,8 @@ void Assembler::je(Label to) {
 
 Assembler::ForwardLabel Assembler::je() {
 	push(0x0f, 0x84);
-	ForwardLabel l = label();
 	push_i32(0);
-	return l;
+	return label();
 }
 
 
@@ -390,9 +374,8 @@ void Assembler::jne(Label to) {
 
 Assembler::ForwardLabel Assembler::jne() {
 	push(0x0f, 0x85);
-	ForwardLabel l = label();
 	push_i32(0);
-	return l;
+	return label();
 }
 
 
@@ -410,9 +393,8 @@ void Assembler::jmp(Label to) {
 
 Assembler::ForwardLabel Assembler::jmp() {
 	push(0xe9);
-	ForwardLabel l = label();
 	push_i32(0);
-	return l;
+	return label();
 }
 
 
@@ -427,7 +409,19 @@ void Assembler::call(Register fn) {
 	push(0xff, 0xd0 | fn.r_index());
 }
 
+void Assembler::call(Label fn) {
+	push(0xe8);
+	push_i32(fn - label() - 4);
+}
+
+Assembler::ForwardLabel Assembler::call() {
+	push(0xe8);
+	push_i32(0);
+	return label();
+}
+
 void Assembler::call(void* fn_ptr) {
+	// maybe use FF instead of E8 ?
 	push(0xe8);
 	_calls.push_back({label(), reinterpret_cast<u8*>(fn_ptr)});
 	push_i32(0);
@@ -440,5 +434,5 @@ Assembler::Label Assembler::label() const {
 	return Label(_bytes.size());
 }
 
-
+}
 

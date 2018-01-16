@@ -19,15 +19,18 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 **********************************/
-#ifndef ASSEMBLER_H
-#define ASSEMBLER_H
+#ifndef JIT_ASSEMBLER_H
+#define JIT_ASSEMBLER_H
 
 #include <vector>
 
 #include "Register.h"
+#include "MemoryBlock.h"
 
-class Assembler
-{
+namespace jit {
+
+class Assembler {
+
 	public:
 		class Label {
 			friend class Assembler;
@@ -63,8 +66,11 @@ class Assembler
 		Assembler();
 
 		template<typename R, typename... Args>
-		Fn<R, Args...> compile() const {
-			return reinterpret_cast<Fn<R, Args...>>(alloc_compile());
+		Fn<R, Args...> compile(MemoryBlock& block) const {
+			if(block.size() < _bytes.size()) {
+				return nullptr;
+			}
+			return reinterpret_cast<Fn<R, Args...>>(copy_compile(block.data()));
 		}
 
 
@@ -122,6 +128,8 @@ class Assembler
 
 
 		void call(Register fn);
+		void call(Label fn);
+		ForwardLabel call();
 		void call(void* fn_ptr);
 
 		template<typename R, typename... Args>
@@ -132,31 +140,25 @@ class Assembler
 
 		Label label() const;
 
-
-		void dump() const;
-
-
 	private:
 		std::vector<u8> _bytes;
 		std::vector<std::pair<Label, u8*>> _calls;
 
+		void* copy_compile(void* buffer) const;
+
 		void forward_label(u32 label);
 
-		void push_r_prefix(Register dst);
-		void push_r_prefix(Register a, Register b);
-		void push_r_prefix_index(Register a, Register b);
-
-		void generic_bin_op(u8 opcode, Register dst, Register src, u8 base = 0xc0);
-		void generic_bin_op(u8 opcode, Register dst, i32 value, u8 base = 0xc0);
-
-		void push_offset(u8 indexes, u32 offset);
-
-		void compute_address(u8 opcode, Register dst, RegisterOffset src);
-		void compute_address(u8 opcode, Register dst, RegisterIndexOffset src);
-		void compute_address(u8 opcode, Register dst, RegisterIndexOffsetRegister src);
+		void r_prefix(Register dst);
+		void r_prefix(Register a, Register b);
+		void r_prefix_with_index(Register a, Register b);
 
 
-		void* alloc_compile() const;
+		void bin_op_instr(u8 opcode, Register dst, Register src, u8 base = 0xc0);
+		void bin_op_instr(u8 opcode, Register dst, i32 value, u8 base = 0xc0);
+
+		void addr_instr(u8 opcode, Register dst, RegisterOffset src);
+		void addr_instr(u8 opcode, Register dst, RegisterIndexOffset src);
+		void addr_instr(u8 opcode, Register dst, RegisterIndexOffsetRegister src);
 
 
 
@@ -182,5 +184,6 @@ class Assembler
 			}
 		}
 };
+}
 
-#endif // ASSEMBLER_H
+#endif // JIT_ASSEMBLER_H

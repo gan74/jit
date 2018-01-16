@@ -19,14 +19,15 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 **********************************/
-#ifndef REGISTER_H
-#define REGISTER_H
+#ifndef JIT_REGISTER_H
+#define JIT_REGISTER_H
 
-#include "utils.h"
+#include <utils.h>
+
+
+namespace jit {
 
 // mainly from https://github.com/t0rakka/realtime/blob/master/source/register.hpp
-
-// eax
 class Register {
 	public:
 		explicit Register(u32 index, u8 bits = 32) : _data(index + (bits << 4)) {
@@ -253,6 +254,7 @@ static Register arg2 = r8d;
 static Register arg3 = r9d;
 
 }
+}
 
 
-#endif // REGISTER_H
+#endif // JIT_REGISTER_H
