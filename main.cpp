@@ -1,13 +1,17 @@
 
 #include <jit/Assembler.h>
+#include <bytecode/eval.h>
+
+#include <chrono>
 
 #include <iostream>
 #include <csignal>
 
 using namespace jit;
+using namespace bytecode;
 
 template<typename R, typename... Args>
-void dump(Fn<R, Args...> fun, usize count = 1) {
+void dump_asm(Fn<R, Args...> fun, usize count = 1) {
 	u8* ptr = reinterpret_cast<u8*>(fun);
 
 	do {
@@ -19,16 +23,9 @@ void dump(Fn<R, Args...> fun, usize count = 1) {
 	printf("\n");
 }
 
-
-__cdecl void a_function() {
-	printf("function called\n");
-}
-
-
 // https://defuse.ca/online-x86-assembler.htm
 
-int main() {
-
+void asm_main() {
 	Assembler a;
 
 	a.push_stack();
@@ -58,12 +55,10 @@ int main() {
 	a.ret();
 
 
-
-
 	MemoryBlock memory;
 	auto fn = a.compile<void, i32*, i32>(memory);
 
-	dump(fn, 2);
+	dump_asm(fn, 2);
 
 	i32 buffer[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
@@ -73,9 +68,37 @@ int main() {
 		printf("%i ", i);
 	}
 	printf("\nok\n");
+}
 
 
 
+
+void bc_main() {
+	Instruction bc[] = {
+		Instruction::set(0, 5000),
+		Instruction::push_arg(0),
+
+		Instruction::function(3),
+		Instruction::set(1, 1),
+		Instruction::cmp(0, 1),
+		Instruction::je(4),
+		Instruction::bin(Op::Subi, 2, 0, 1),
+
+		Instruction::push_arg(2),
+		Instruction::call(1, -6),
+
+		Instruction::bin(Op::Addi, 0, 0, 1),
+		Instruction::ret(0)
+	};
+
+	auto r = eval(bc).integer;
+
+	std::cout << "r = " << r << std::endl;
+}
+
+
+int main() {
+	bc_main();
 
 	return 0;
 }
