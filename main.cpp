@@ -1,14 +1,14 @@
 
 #include <jit/Assembler.h>
+
 #include <bytecode/eval.h>
+#include <bytecode/Assembler.h>
 
 #include <chrono>
 
 #include <iostream>
 #include <csignal>
 
-using namespace jit;
-using namespace bytecode;
 
 template<typename R, typename... Args>
 void dump_asm(Fn<R, Args...> fun, usize count = 1) {
@@ -26,6 +26,7 @@ void dump_asm(Fn<R, Args...> fun, usize count = 1) {
 // https://defuse.ca/online-x86-assembler.htm
 
 void asm_main() {
+	using namespace jit;
 	Assembler a;
 
 	a.push_stack();
@@ -74,23 +75,34 @@ void asm_main() {
 
 
 void bc_main() {
-	Instruction bc[] = {
-		Instruction::set(0, 5000),
-		Instruction::push_arg(0),
+	using namespace bytecode;
 
-		Instruction::function(3, 8),
-		Instruction::set(1, 1),
-		Instruction::cmp(0, 1),
-		Instruction::je(4),
-		Instruction::bin(Op::Subi, 2, 0, 1),
+	Assembler a;
 
-		Instruction::push_arg(2),
-		Instruction::call(1, -6),
+	a.set(0, 6);
 
-		Instruction::bin(Op::Addi, 0, 0, 1),
-	};
+	auto fib = a.label();
 
-	auto r = eval(bc).integer;
+	a.function_head(5);
+	a.set(1, 1);
+	auto end = a.jlt(0, 1);
+
+	a.sub(1, 0, 1);
+	a.push_arg(1);
+	a.call(1, fib);
+
+	a.set(2, -2);
+	a.add(2, 0, 2);
+	a.push_arg(2);
+	a.call(2, fib);
+
+	a.add(1, 1, 2);
+	end = a;
+	a.ret(1);
+
+	a.dump();
+
+	auto r = eval(a.data()).integer;
 
 	std::cout << "r = " << r << std::endl;
 }

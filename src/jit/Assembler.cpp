@@ -44,7 +44,7 @@ void* Assembler::copy_compile(void* buffer) const {
 	for(const auto& call : _calls) {
 		u8* addr = reinterpret_cast<u8*>(buffer) + call.first._index;
 		auto diff = call.second - addr;
-		*reinterpret_cast<u32*>(addr) = u32(diff) - 4; // wat ?
+		*reinterpret_cast<u32*>(addr) = u32(diff) - sizeof(u32); // wat ?
 	}
 
 	return buffer;
@@ -58,7 +58,11 @@ void* Assembler::copy_compile(void* buffer) const {
 
 void Assembler::forward_label(u32 label) {
 	u32 diff =  _bytes.size() - label;
-	*reinterpret_cast<u32*>(&_bytes[label - 4]) = diff;
+	*reinterpret_cast<u32*>(&_bytes[label - sizeof(u32)]) = diff;
+}
+
+Assembler::Label Assembler::label() const {
+	return Label(_bytes.size());
 }
 
 void Assembler::r_prefix(Register dst) {
@@ -425,13 +429,6 @@ void Assembler::call(void* fn_ptr) {
 	push(0xe8);
 	_calls.push_back({label(), reinterpret_cast<u8*>(fn_ptr)});
 	push_i32(0);
-}
-
-
-
-
-Assembler::Label Assembler::label() const {
-	return Label(_bytes.size());
 }
 
 }

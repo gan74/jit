@@ -22,11 +22,11 @@ SOFTWARE.
 #ifndef BYTECODE_EVAL_H
 #define BYTECODE_EVAL_H
 
-#include "Instruction.h"
+#include "Bytecode.h"
 
 namespace bytecode {
 
-Value eval(Instruction* bc);
+Value eval(const Bytecode* bc);
 
 }
 

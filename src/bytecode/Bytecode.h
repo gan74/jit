@@ -26,33 +26,38 @@ SOFTWARE.
 
 namespace bytecode {
 
-enum class Op : u8 {
-	Nop,
+namespace detail {
 
-	FuncHead,
+constexpr inline u8 build_opcode(u8 op, u8 = 0) {
+	return op;
+}
 
-	Mov,
-	Seti,
+}
 
-	PushArg,
-	Call,
+using Register = i8;
 
-	Addi,
-	Subi,
-	Muli,
+enum class Bytecode : u8 {
+	Nop			= detail::build_opcode(0x00),
 
-	Cmp,
-	Je,
-	Jne,
+	Add			= detail::build_opcode(0x10, 3),
+	Sub			= detail::build_opcode(0x11, 3),
+	Mul			= detail::build_opcode(0x12, 3),
+	Div			= detail::build_opcode(0x13, 2),
 
-	Jmp,
+	Cpy			= detail::build_opcode(0x14, 2),
+	Set			= detail::build_opcode(0x15, 5),
 
-	Ret,
+	FuncHead	= detail::build_opcode(0x20, 1),
+	Ret			= detail::build_opcode(0x21, 1),
+	PushArg		= detail::build_opcode(0x22, 1),
+	Call		= detail::build_opcode(0x23, 5),
 
-	Max
+
+	Jlt			= detail::build_opcode(0x31, 6),
+
 };
 
-static_assert(sizeof(Op) == sizeof(u8));
+static_assert(sizeof(Bytecode) == sizeof(u8));
 
 
 

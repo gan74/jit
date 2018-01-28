@@ -22,93 +22,120 @@ SOFTWARE.
 
 #include "eval.h"
 
+#include <cstdio>
+
 namespace bytecode {
 
-static Value eval(Instruction* bc, Value* stack) {
-	Value* stack_top = stack;
-	Instruction* bc_end = nullptr;
+using bc_ptr = const Bytecode*;
 
-	usize args = 0;
-	bool is_equal = false;
 
-	for(; bc != bc_end; ++bc) {
-		Instruction i = *bc;
-
-		switch(i.op) {
-			case Op::Nop:
-			break;
-
-			case Op::FuncHead:
-				args = 0;
-				stack_top = stack + i.func_head.regs;
-				bc_end = bc + i.func_head.len;
-			break;
-
-			case Op::Mov:
-				stack[i.bin_op.dst] = stack[i.bin_op.a];
-			break;
-
-			case Op::Seti:
-				stack[i.value.dst].integer = i.value.value;
-			break;
-
-			case Op::PushArg:
-				stack_top[args++] = stack[i.bin_op.dst];
-			break;
-
-			case Op::Call:
-				if((bc + i.value.value)->op != Op::FuncHead) {
-					fatal("Invalid call.");
-				}
-				args = 0;
-				stack[i.value.dst] = eval(bc + i.value.value, stack_top);
-			break;
-
-			case Op::Addi:
-				stack[i.bin_op.dst].integer = stack[i.bin_op.a].integer + stack[i.bin_op.b].integer;
-			break;
-
-			case Op::Subi:
-				stack[i.bin_op.dst].integer = stack[i.bin_op.a].integer - stack[i.bin_op.b].integer;
-			break;
-
-			case Op::Muli:
-				stack[i.bin_op.dst].integer = stack[i.bin_op.a].integer * stack[i.bin_op.b].integer;
-			break;
-
-			case Op::Cmp:
-				is_equal = stack[i.bin_op.a].integer == stack[i.bin_op.b].integer;
-			break;
-
-			case Op::Je:
-				if(is_equal) {
-					bc = bc + i.value.value;
-				}
-			break;
-
-			case Op::Jne:
-				if(!is_equal) {
-					bc = bc + i.value.value;
-				}
-			break;
-
-			case Op::Jmp:
-				bc = bc + i.value.value;
-			break;
-
-			case Op::Ret:
-				return stack[i.bin_op.dst];
-			break;
-
-			default:
-				fatal("Invalid instruction.");
-		}
-	}
-	return stack[0];
+template<typename T>
+static T next(bc_ptr& bc) {
+	T v = *reinterpret_cast<const T*>(bc);
+	bc += sizeof(T);
+	return v;
 }
 
 
-Value eval(Instruction* bc) {
+static Value eval(bc_ptr bc, Value* stack) {
+	Value* stack_top = stack;
+
+	usize args = 0;
+
+	u8 dst;
+	u8 op_a;
+	u8 op_b;
+	i32 offset;
+
+	auto read_dst =		[&]() { dst = next<Register>(bc); };
+	auto read_op_a =	[&]() { op_a = next<Register>(bc); };
+	auto read_op_b =	[&]() { op_b = next<Register>(bc); };
+	auto read_ops =		[&]() { read_dst(); read_op_a(); read_op_b(); };
+	auto read_offset =	[&]() { offset = next<i32>(bc); };
+
+	for(;;) {
+		Bytecode i = next<Bytecode>(bc);
+
+		switch(i) {
+			case Bytecode::Nop:
+			break;
+
+			case Bytecode::Add:
+				read_ops();
+
+				stack[dst].integer = stack[op_a].integer + stack[op_b].integer;
+			break;
+
+			case Bytecode::Sub:
+				read_ops();
+
+				stack[dst].integer = stack[op_a].integer - stack[op_b].integer;
+			break;
+
+			case Bytecode::Cpy:
+				read_dst();
+				read_op_a();
+
+				stack[dst] = stack[op_a];
+			break;
+
+			case Bytecode::Set:
+				read_dst();
+				read_offset();
+
+				stack[dst].integer = offset;
+			break;
+
+
+			case Bytecode::FuncHead:
+				read_op_a();
+
+				args = 0;
+				stack_top = stack + op_a;
+			break;
+
+			case Bytecode::PushArg:
+				read_op_a();
+
+				stack_top[args++] = stack[op_a];
+			break;
+
+			case Bytecode::Ret:
+				read_op_a();
+
+				return stack[op_a];
+			break;
+
+			case Bytecode::Call:
+				read_dst();
+				read_offset();
+
+				if(offset && bc[offset] != Bytecode::FuncHead) {
+					fatal("Invalid call.");
+				}
+				args = 0;
+				stack[dst] = eval(bc + offset, stack_top);
+			break;
+
+			case Bytecode::Jlt:
+				read_op_a();
+				read_op_b();
+				read_offset();
+
+				if(stack[op_a].integer < stack[op_b].integer) {
+					bc = bc + offset;
+				}
+			break;
+
+			default:
+				printf("Invalid instruction: %x\n", int(i));
+				fatal("Invalid instruction.");
+		}
+	}
+}
+
+
+Value eval(const Bytecode* bc) {
 	static constexpr usize stack_size = 16 * 1024;
 	Value* stack = new Value[stack_size];
 
@@ -117,6 +144,7 @@ Value eval(Instruction* bc) {
 	delete[] stack;
 
 	return r;
+
 }
 
 }
