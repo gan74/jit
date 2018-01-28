@@ -26,18 +26,22 @@ namespace bytecode {
 
 static Value eval(Instruction* bc, Value* stack) {
 	Value* stack_top = stack;
+	Instruction* bc_end = nullptr;
+
 	usize args = 0;
 	bool is_equal = false;
-	for(;; ++bc) {
+
+	for(; bc != bc_end; ++bc) {
 		Instruction i = *bc;
 
-		switch(i.head.op) {
+		switch(i.op) {
 			case Op::Nop:
 			break;
 
 			case Op::FuncHead:
 				args = 0;
 				stack_top = stack + i.func_head.regs;
+				bc_end = bc + i.func_head.len;
 			break;
 
 			case Op::Mov:
@@ -53,7 +57,7 @@ static Value eval(Instruction* bc, Value* stack) {
 			break;
 
 			case Op::Call:
-				if((bc + i.value.value)->head.op != Op::FuncHead) {
+				if((bc + i.value.value)->op != Op::FuncHead) {
 					fatal("Invalid call.");
 				}
 				args = 0;
@@ -100,6 +104,7 @@ static Value eval(Instruction* bc, Value* stack) {
 				fatal("Invalid instruction.");
 		}
 	}
+	return stack[0];
 }
 
 

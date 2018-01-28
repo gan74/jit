@@ -78,7 +78,7 @@ void bc_main() {
 		Instruction::set(0, 5000),
 		Instruction::push_arg(0),
 
-		Instruction::function(3),
+		Instruction::function(3, 8),
 		Instruction::set(1, 1),
 		Instruction::cmp(0, 1),
 		Instruction::je(4),
@@ -88,7 +88,6 @@ void bc_main() {
 		Instruction::call(1, -6),
 
 		Instruction::bin(Op::Addi, 0, 0, 1),
-		Instruction::ret(0)
 	};
 
 	auto r = eval(bc).integer;

@@ -27,39 +27,37 @@ SOFTWARE.
 namespace bytecode {
 
 union Instruction {
-	struct {
-		Op op;
-		u8 flags;
-	} head;
+	Op op;
 
 	struct {
-		u16 _;
-		u16 dst;
-		u16 a;
-		u16 b;
+		Op op;
+		u8 dst;
+		u8 a;
+		u8 b;
 	} bin_op;
 
 	struct {
-		u16 _;
-		u16 regs;
+		Op op;
+		u8 regs;
+		u8 len;
 	} func_head;
 
 	struct {
-		u16 _;
-		u16 dst;
-		i32 value;
+		Op op;
+		u8 dst;
+		i16 value;
 	} value;
 
 
-	constexpr Instruction(Op op) : head{op, 0} {
+	constexpr Instruction(Op op) : op(op) {
 	}
 
 	static Instruction bin(Op op, u16 dst, u16 a, u16 b) {
 		return Instruction(op, dst, a, b);
 	}
 
-	static Instruction function(u16 reg_count) {
-		return Instruction(Op::FuncHead, reg_count, 0);
+	static Instruction function(u16 reg_count, u16 bc_len) {
+		return Instruction(Op::FuncHead, reg_count, bc_len, 0);
 	}
 
 	static Instruction push_arg(u16 src) {
@@ -91,22 +89,17 @@ union Instruction {
 	}
 
 	private:
-		constexpr static u16 head_16(Op op, u8 flags) {
-			decltype(head) h{op, flags};
-			return reinterpret_cast<u16&>(h);
+		constexpr Instruction(Op op, u8 dst, u8 a, u8 b) : bin_op{op, dst, a, b} {
 		}
 
-		constexpr Instruction(Op op, u16 dst, u16 a, u16 b) : bin_op{head_16(op, 0), dst, a, b} {
-		}
-
-		constexpr Instruction(Op op, u16 dst, i32 value) : value{head_16(op, 0), dst, value} {
+		constexpr Instruction(Op op, u8 dst, i16 value) : value{op, dst, value} {
 		}
 
 
 };
 
-static_assert(offsetof(decltype(Instruction::bin_op), _) == 0);
-static_assert(sizeof(Instruction) == sizeof(u64));
+static_assert(offsetof(decltype(Instruction::bin_op), op) == 0);
+static_assert(sizeof(Instruction) == sizeof(u32));
 
 }
 
