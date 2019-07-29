@@ -19,39 +19,22 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 **********************************/
+#ifndef JIT_PROGRAM_H
+#define JIT_PROGRAM_H
 
-#include "MemoryBlock.h"
+#include "bytecode.h"
 
-#ifdef __WIN32
-#define WIN32_MEMORY_BLOCK
-#include <windows.h>
-#endif
+#include <vector>
 
 namespace jit {
 
-static void* make_executable(void* data, usize size) {
-#ifdef WIN32_MEMORY_BLOCK
-	DWORD protec = 0;
-	VirtualProtect(data, size, PAGE_EXECUTE_READWRITE, &protec);
-#else
-#error unsupported OS.
-#endif
-	return data;
-}
 
-MemoryBlock::MemoryBlock(usize size) : _data(make_executable(std::malloc(size), size)), _size(size) {
-}
+struct Program {
+	static Program from_luac(ArrayView<u8> luac_data);
 
-MemoryBlock::~MemoryBlock() {
-	std::free(_data);
-}
-
-void* MemoryBlock::data() const {
-	return _data;
-}
-
-usize MemoryBlock::size() const {
-	return _size;
-}
+	std::vector<Function> functions;
+};
 
 }
+
+#endif // JIT_PROGRAM_H

@@ -1,5 +1,5 @@
 /*******************************
-Copyright (c) 2016-2017 Gr�goire Angerand
+Copyright (c) 2016-2018 Gr�goire Angerand
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,57 +19,72 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 **********************************/
-#ifndef BYTECODE_BYTECODE_H
-#define BYTECODE_BYTECODE_H
+#ifndef JIT_VALUE_H
+#define JIT_VALUE_H
 
 #include <utils.h>
 
-namespace bytecode {
+#include "bytecode.h"
 
-namespace detail {
+namespace jit {
 
-constexpr inline u8 build_opcode(u8 op, u8 = 0) {
-	return op;
-}
+class Table;
 
-}
+enum class ValueType {
+	None,
+	Number,
+	Table,
+	String,
 
-using Register = i8;
+	Closure,
+	ExternalFunction
+};
 
-enum class Bytecode : u8 {
-	Nop			= detail::build_opcode(0x00),
+struct Value;
+using FunctionPtr = Value(*)(Value*, usize);
 
-	Add			= detail::build_opcode(0x10, 3),
-	Sub			= detail::build_opcode(0x11, 3),
-	Mul			= detail::build_opcode(0x12, 3),
-	Div			= detail::build_opcode(0x13, 2),
+struct Value {
+	ValueType type = ValueType::None;
 
-	Cpy			= detail::build_opcode(0x14, 2),
-	Set			= detail::build_opcode(0x15, 5),
+	union {
+		i64 integer;
+		double number;
+		void* ptr;
+		const void* c_ptr;
+	};
 
-	FuncHead	= detail::build_opcode(0x20, 1),
-	Ret			= detail::build_opcode(0x21, 1),
-	PushArg		= detail::build_opcode(0x22, 1),
-	Call		= detail::build_opcode(0x23, 5),
+	Value();
+
+	Value(double n);
+	Value(Table* t);
+#warning string should be able to contain nulls
+	Value(std::string* s);
+	Value(std::string_view s);
+	Value(FunctionPtr f);
+	Value(const Function* f);
+
+	Value(const Constant& cst);
+
+	static const char* type_str(ValueType type);
+	const char* type_str() const;
+
+	Table& table();
+	std::string& string();
+
+	const Table& table() const;
+	const std::string& string() const;
+	FunctionPtr func() const;
+	const Function& closure() const;
 
 
-	Jlt			= detail::build_opcode(0x31, 6),
+	bool operator==(const Value& value) const;
+
+	Value& operator=(const Value& v);
 
 };
 
-static_assert(sizeof(Bytecode) == sizeof(u8));
-
-
-
-union Value {
-	i64 integer;
-	double real;
-	void* object;
-};
-
-static_assert(sizeof(Value) == sizeof(u64));
 
 
 }
 
-#endif // BYTECODE_BYTECODE_H
+#endif // VALUE_H

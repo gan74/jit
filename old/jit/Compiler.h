@@ -19,39 +19,36 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 **********************************/
+#ifndef JIT_COMPILER_H
+#define JIT_COMPILER_H
 
-#include "MemoryBlock.h"
+#include <ast/ast.h>
 
-#ifdef __WIN32
-#define WIN32_MEMORY_BLOCK
-#include <windows.h>
-#endif
+#include "Assembler.h"
 
 namespace jit {
 
-static void* make_executable(void* data, usize size) {
-#ifdef WIN32_MEMORY_BLOCK
-	DWORD protec = 0;
-	VirtualProtect(data, size, PAGE_EXECUTE_READWRITE, &protec);
-#else
-#error unsupported OS.
-#endif
-	return data;
-}
+class Compiler {
 
-MemoryBlock::MemoryBlock(usize size) : _data(make_executable(std::malloc(size), size)), _size(size) {
-}
+	public:
+		Compiler();
 
-MemoryBlock::~MemoryBlock() {
-	std::free(_data);
-}
+		void compile(const Ast& ast);
 
-void* MemoryBlock::data() const {
-	return _data;
-}
+		const Assembler& assembler() const;
 
-usize MemoryBlock::size() const {
-	return _size;
-}
+	private:
+		void compile_rhs(Register dst, const Node& node, const Ast& ast);
+		void compile_rhs(RegisterIndexOffsetRegister dst, const Node& node, const Ast& ast);
+
+		Register compile_lhs(const Node& node, const Ast& ast);
+
+
+		Assembler _assembler;
+		std::vector<RegisterIndexOffsetRegister> _symbols;
+		std::vector<Register> _free_regs;
+};
 
 }
+
+#endif // JIT_COMPILER_H

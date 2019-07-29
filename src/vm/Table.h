@@ -19,39 +19,41 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 **********************************/
+#ifndef JIT_TABLE_H
+#define JIT_TABLE_H
 
-#include "MemoryBlock.h"
+#include "Value.h"
 
-#ifdef __WIN32
-#define WIN32_MEMORY_BLOCK
-#include <windows.h>
-#endif
+#include <vector>
 
 namespace jit {
 
-static void* make_executable(void* data, usize size) {
-#ifdef WIN32_MEMORY_BLOCK
-	DWORD protec = 0;
-	VirtualProtect(data, size, PAGE_EXECUTE_READWRITE, &protec);
-#else
-#error unsupported OS.
-#endif
-	return data;
+class Table {
+	public:
+		usize size() const;
+
+		Value& operator[](const Constant& cst);
+		Value& operator[](const Value& value);
+
+
+		template<typename T>
+		Value& get(const T& t) {
+			return (*this)[t];
+		}
+
+		auto begin() {
+			return _storage.begin();
+		}
+
+		auto end() {
+			return _storage.end();
+		}
+
+	private:
+		std::vector<std::pair<Value, Value>> _storage;
+};
+
+
 }
 
-MemoryBlock::MemoryBlock(usize size) : _data(make_executable(std::malloc(size), size)), _size(size) {
-}
-
-MemoryBlock::~MemoryBlock() {
-	std::free(_data);
-}
-
-void* MemoryBlock::data() const {
-	return _data;
-}
-
-usize MemoryBlock::size() const {
-	return _size;
-}
-
-}
+#endif // JIT_TABLE_H

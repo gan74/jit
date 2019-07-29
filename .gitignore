@@ -3,3 +3,6 @@
 *.dump
 *.exe
 *.s
+/CMakeLists.txt.user.4.8-pre1
+*.dll
+*.out

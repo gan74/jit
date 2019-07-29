@@ -1,5 +1,5 @@
 /*******************************
-Copyright (c) 2016-2017 Gr�goire Angerand
+Copyright (c) 2016-2018 Gr�goire Angerand
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,13 +24,16 @@ SOFTWARE.
 
 #include <cstdio>
 
+namespace jit {
 
 bool is_8_bits(i32 x) {
 	return i8(x) == x;
 }
 
 void fatal(const char* msg) {
-	printf(msg);
-	printf("\n");
-	std::exit(1);
+	std::printf(msg);
+	std::printf("\n");
+	std::abort();
+}
+
 }

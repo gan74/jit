@@ -1,5 +1,5 @@
 /*******************************
-Copyright (c) 2016-2017 Gr�goire Angerand
+Copyright (c) 2016-2018 Gr�goire Angerand
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,9 @@ SOFTWARE.
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <array>
+
+namespace jit {
 
 using u8 = std::uint8_t;
 using u16 = std::uint16_t;
@@ -46,6 +49,92 @@ template<typename R, typename... Args>
 using Fn = __cdecl R (*)(Args...);
 
 static_assert(sizeof(void*) == 8);
+
+template<typename... Args>
+void unused(Args...) {}
+
+
+template<typename F>
+class ScopeExit {
+	F _f;
+	public:
+		ScopeExit(F&& f) : _f(f) {}
+		~ScopeExit() { _f(); }
+};
+
+#define SCOPE_EXIT_HELPER(a, b) a ## b
+#define SCOPE_EXIT(expr) auto SCOPE_EXIT_HELPER(scope_exit_, __LINE__) = ScopeExit([&] { expr; });
+
+
+template<typename T>
+class ArrayView {
+	public:
+		using value_type = T;
+		using const_iterator = const T*;
+
+		constexpr ArrayView() = default;
+
+		constexpr ArrayView(const ArrayView&) = default;
+		constexpr ArrayView& operator=(const ArrayView&) = default;
+
+		constexpr ArrayView(std::nullptr_t) {
+		}
+
+		ArrayView(const T& t) : _data(&t), _size(1) {
+		}
+
+		ArrayView(const T* data, usize size) : _data(data), _size(size) {
+		}
+
+		template<usize N>
+		ArrayView(const T(&arr)[N]) : _data(arr), _size(N) {
+		}
+
+		template<usize N>
+		ArrayView(const std::array<T, N>& arr) : _data(arr.data()), _size(N) {
+		}
+
+		ArrayView(std::initializer_list<T> l) : _data(l.begin()), _size(l.size()) {
+		}
+
+		usize size() const {
+			return _size;
+		}
+
+		bool is_empty() const {
+			return !_size;
+		}
+
+		const T* data() const {
+			return _data;
+		}
+
+		const_iterator begin() const {
+			return _data;
+		}
+
+		const_iterator end() const {
+			return _data + _size;
+		}
+
+		const_iterator cbegin() const {
+			return _data;
+		}
+
+		const_iterator cend() const {
+			return _data + _size;
+		}
+
+		const T& operator[](usize i) const {
+			return _data[i];
+		}
+
+	private:
+		const T* _data = nullptr;
+		usize _size = 0;
+};
+
+}
 
 
 

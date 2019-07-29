@@ -20,38 +20,57 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 **********************************/
 
-#include "MemoryBlock.h"
-
-#ifdef __WIN32
-#define WIN32_MEMORY_BLOCK
-#include <windows.h>
-#endif
+#include "Compiler.h"
 
 namespace jit {
 
-static void* make_executable(void* data, usize size) {
-#ifdef WIN32_MEMORY_BLOCK
-	DWORD protec = 0;
-	VirtualProtect(data, size, PAGE_EXECUTE_READWRITE, &protec);
-#else
-#error unsupported OS.
-#endif
-	return data;
+Compiler::Compiler() {
+	_free_regs.push_back(regs::rax);
+	_free_regs.push_back(regs::rbx);
+	_free_regs.push_back(regs::r10);
+	_free_regs.push_back(regs::r11);
+	_free_regs.push_back(regs::r12);
+	_free_regs.push_back(regs::r13);
+	_free_regs.push_back(regs::r14);
+	_free_regs.push_back(regs::r15);
 }
 
-MemoryBlock::MemoryBlock(usize size) : _data(make_executable(std::malloc(size), size)), _size(size) {
+void Compiler::compile(const Ast& ast) {
+	compile_rhs(regs::rax , ast.root(), ast);
 }
 
-MemoryBlock::~MemoryBlock() {
-	std::free(_data);
+void Compiler::compile_rhs(Register dst, const Node& node, const Ast& ast) {
+	switch(node.type) {
+		case NodeType::NumLit:
+			_assembler.mov(dst, node.data.lit.value);
+		break;
+
+		case NodeType::Symbol:
+			_assembler.mov(dst, _symbols[node.data.sym.index]);
+		break;
+
+		default:
+			fatal("Unsupported.");
+	}
 }
 
-void* MemoryBlock::data() const {
-	return _data;
+void Compiler::compile_rhs(RegisterIndexOffsetRegister dst, const Node& node, const Ast& ast) {
+	switch(node.type) {
+		default:
+			fatal("Unsupported.");
+	}
 }
 
-usize MemoryBlock::size() const {
-	return _size;
+
+Register Compiler::compile_lhs(const Node& node, const Ast& ast) {
+	switch(node.type) {
+		default:
+			fatal("Unsupported.");
+	}
+}
+
+const Assembler& Compiler::assembler() const {
+	return _assembler;
 }
 
 }

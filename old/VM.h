@@ -19,39 +19,53 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 **********************************/
+#ifndef JIT_EVAL_H
+#define JIT_EVAL_H
 
-#include "MemoryBlock.h"
+#include "bytecode.h"
+#include "Value.h"
+#include "Program.h"
 
-#ifdef __WIN32
-#define WIN32_MEMORY_BLOCK
-#include <windows.h>
-#endif
+#include <memory>
 
 namespace jit {
 
-static void* make_executable(void* data, usize size) {
-#ifdef WIN32_MEMORY_BLOCK
-	DWORD protec = 0;
-	VirtualProtect(data, size, PAGE_EXECUTE_READWRITE, &protec);
-#else
-#error unsupported OS.
-#endif
-	return data;
+class VM {
+
+	public:
+		enum class ErrorType {
+			NoError,
+			TypeError,
+			UnknownOpError
+		};
+
+		struct Error {
+			ErrorType type = ErrorType::NoError;
+			const Instruction* instruction = nullptr;
+		};
+
+		VM(Table* env);
+
+		Error eval(const Program& program, Value* ret);
+
+
+	private:
+		Error eval(const Function& function, Value* ret);
+
+		Value& upvalue(UpValue up);
+
+		void push_stack(const Function& function);
+		void pop_stack();
+
+		Value* _func_stack = nullptr;
+		std::unique_ptr<Value[]> _stack;
+		std::vector<Value*> _stack_frames;
+
+		static bool check_type(const Value& value, ValueType type, const Instruction* instruction, Error& err);
+
+};
+
+
 }
 
-MemoryBlock::MemoryBlock(usize size) : _data(make_executable(std::malloc(size), size)), _size(size) {
-}
-
-MemoryBlock::~MemoryBlock() {
-	std::free(_data);
-}
-
-void* MemoryBlock::data() const {
-	return _data;
-}
-
-usize MemoryBlock::size() const {
-	return _size;
-}
-
-}
+#endif // JIT_EVAL_H

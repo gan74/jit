@@ -20,38 +20,27 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 **********************************/
 
-#include "MemoryBlock.h"
-
-#ifdef __WIN32
-#define WIN32_MEMORY_BLOCK
-#include <windows.h>
-#endif
+#include "Table.h"
+#include "library.h"
 
 namespace jit {
 
-static void* make_executable(void* data, usize size) {
-#ifdef WIN32_MEMORY_BLOCK
-	DWORD protec = 0;
-	VirtualProtect(data, size, PAGE_EXECUTE_READWRITE, &protec);
-#else
-#error unsupported OS.
-#endif
-	return data;
+usize Table::size() const {
+	return _storage.size();
 }
 
-MemoryBlock::MemoryBlock(usize size) : _data(make_executable(std::malloc(size), size)), _size(size) {
+Value& Table::operator[](const Constant& cst) {
+	return (*this)[Value(cst)];
 }
 
-MemoryBlock::~MemoryBlock() {
-	std::free(_data);
-}
-
-void* MemoryBlock::data() const {
-	return _data;
-}
-
-usize MemoryBlock::size() const {
-	return _size;
+Value& Table::operator[](const Value& value) {
+	for(auto& v : _storage) {
+		if(v.first == value) {
+			return v.second;
+		}
+	}
+	_storage.emplace_back(value, Value());
+	return _storage.back().second;
 }
 
 }

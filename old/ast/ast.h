@@ -19,39 +19,61 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 **********************************/
+#ifndef JIT_AST_H
+#define JIT_AST_H
 
-#include "MemoryBlock.h"
+#include <vector>
 
-#ifdef __WIN32
-#define WIN32_MEMORY_BLOCK
-#include <windows.h>
-#endif
+#include <utils.h>
 
 namespace jit {
 
-static void* make_executable(void* data, usize size) {
-#ifdef WIN32_MEMORY_BLOCK
-	DWORD protec = 0;
-	VirtualProtect(data, size, PAGE_EXECUTE_READWRITE, &protec);
-#else
-#error unsupported OS.
-#endif
-	return data;
+enum class NodeType {
+	NumLit,
+
+	Decl,
+	Symbol,
+
+	Assign,
+
+	Add,
+};
+
+
+struct Node {
+	NodeType type;
+
+	union Data {
+		struct Bin {
+			u32 left;
+			u32 right;
+		} bin;
+
+		struct Symbol {
+			u32 index;
+		} sym;
+
+		struct Lit {
+			i32 value;
+		} lit;
+	} data;
+};
+
+
+class Ast {
+	public:
+		const Node& node(u32 index) const {
+			return _nodes[index];
+		}
+
+		const Node& root() const {
+			return _nodes.back();
+		}
+
+	private:
+		std::vector<Node> _nodes;
+};
+
 }
 
-MemoryBlock::MemoryBlock(usize size) : _data(make_executable(std::malloc(size), size)), _size(size) {
-}
-
-MemoryBlock::~MemoryBlock() {
-	std::free(_data);
-}
-
-void* MemoryBlock::data() const {
-	return _data;
-}
-
-usize MemoryBlock::size() const {
-	return _size;
-}
-
-}
+#endif // JIT_AST_H

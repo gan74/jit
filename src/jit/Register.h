@@ -1,5 +1,5 @@
 /*******************************
-Copyright (c) 2016-2017 Gr�goire Angerand
+Copyright (c) 2016-2018 Gr�goire Angerand
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,6 +27,7 @@ SOFTWARE.
 
 namespace jit {
 
+
 // mainly from https://github.com/t0rakka/realtime/blob/master/source/register.hpp
 class Register {
 	public:
@@ -35,7 +36,6 @@ class Register {
 				fatal("Unsupported.");
 			}
 		}
-
 
 		u8 bits() const {
 			return _data >> 4;
@@ -204,7 +204,6 @@ inline RegisterIndexOffsetRegister operator+(RegisterOffset offset, RegisterInde
 	return RegisterIndexOffsetRegister(reg, offset);
 }
 
-
 namespace regs {
 static Register eax  = Register(0);
 static Register ecx  = Register(1);
@@ -247,13 +246,15 @@ static Register r14  = Register(14, 64);
 static Register r15 = Register(15, 64);
 
 
-
 static Register arg0 = ecx;
 static Register arg1 = edx;
 static Register arg2 = r8d;
 static Register arg3 = r9d;
 
+static constexpr u32 register_count = 16;
+
 }
+
 }
 
 
