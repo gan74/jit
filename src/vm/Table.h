@@ -32,14 +32,13 @@ class Table {
 	public:
 		usize size() const;
 
-		Value& operator[](const Constant& cst);
-		Value& operator[](const Value& value);
+		void set(const Constant& cst, const Value& value);
+		void set(const Value& key, const Value& value);
 
 
-		template<typename T>
-		Value& get(const T& t) {
-			return (*this)[t];
-		}
+		Value get(const Constant& cst);
+		Value get(const Value& value);
+
 
 		auto begin() {
 			return _storage.begin();

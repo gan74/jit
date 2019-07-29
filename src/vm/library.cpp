@@ -26,6 +26,7 @@ SOFTWARE.
 
 #include <cmath>
 #include <cstdio>
+#include <algorithm>
 
 namespace jit {
 namespace lib {
@@ -62,7 +63,7 @@ template<typename T, typename... Args>
 static Table* default_io() {
 	Table* io = new Table();
 
-	io->get(Value("read")) = &io_read;
+	io->set(Value("read"),  &io_read);
 
 	return io;
 }
@@ -70,7 +71,7 @@ static Table* default_io() {
 static Table* default_math() {
 	Table* io = new Table();
 
-	io->get(Value("sqrt")) = &math_sqrt;
+	io->set(Value("sqrt"), &math_sqrt);
 
 	return io;
 }
@@ -78,7 +79,7 @@ static Table* default_math() {
 static Table* default_table() {
 	Table* io = new Table();
 
-	io->get(Value("insert")) = &table_insert;
+	io->set(Value("insert"), &table_insert);
 
 	return io;
 }
@@ -86,13 +87,13 @@ static Table* default_table() {
 Table default_env() {
 	Table env;
 
-	env[Value("print")] = &print;
-	env[Value("pairs")] = &pairs;
-	env[Value("ipairs")] = &ipairs;
+	env.set(Value("print"), &print);
+	env.set(Value("pairs"), &pairs);
+	env.set(Value("ipairs"), &ipairs);
 
-	env[Value("math")] = default_math();
-	env[Value("io")] = default_io();
-	env[Value("table")] = default_table();
+	env.set(Value("math"), default_math());
+	env.set(Value("io"), default_io());
+	env.set(Value("table"), default_table());
 
 	return env;
 }
@@ -125,31 +126,48 @@ u32 print(MutableSpan<Value>, Span<Value> in) {
 	return 0;
 }
 
-
-static u32 iterate(MutableSpan<Value> out, Span<Value> in) {
-	check_params(2, in);
-	check_type(in[0], ValueType::Table);
-	check_type(in[1], ValueType::Number);
-
-	Table& table = in[0].table();
-	double it = in[1].number;
-
-	if(it >= table.size()) {
-		return build_out(out, Value());
-	}
-	return build_out(out, Value(it + 1.0), table[it]);
-}
-
 u32 pairs(MutableSpan<Value> out, Span<Value> in) {
 	check_params(1, in);
-	unused(out);
 
+	/*unused(out);
 	fatal("Unsupported.");
-	return 0;
+	return 0;*/
+
+	FunctionPtr iterate = [](MutableSpan<Value> out, Span<Value> in) -> u32 {
+		check_params(2, in);
+		check_type(in[0], ValueType::Table);
+
+		Table& table = in[0].table();
+		auto it = in[1].type == ValueType::None
+			? table.begin()
+			: std::find_if(table.begin(), table.end(), [&](const auto& p) { return p.first == in[1]; }) + 1;
+
+		if(it == table.end()) {
+			return build_out(out, Value());
+		}
+
+		return build_out(out, it->first, it->second);
+	};
+
+	return build_out(out, iterate, in[0], Value());
 }
 
 u32 ipairs(MutableSpan<Value> out, Span<Value> in) {
 	check_params(1, in);
+
+	FunctionPtr iterate = [](MutableSpan<Value> out, Span<Value> in) -> u32 {
+		check_params(2, in);
+		check_type(in[0], ValueType::Table);
+		check_type(in[1], ValueType::Number);
+
+		Table& table = in[0].table();
+		double next = in[1].number + 1.0;
+
+		if(next >= table.size()) {
+			return build_out(out, Value());
+		}
+		return build_out(out, next, table.get(next));
+	};
 
 	return build_out(out, iterate, in[0], 0);
 }
@@ -183,7 +201,7 @@ u32 table_insert(MutableSpan<Value>, Span<Value> in) {
 	check_type(in[0], ValueType::Table);
 
 	Table& t = in[0].table();
-	t.get(Value(t.size())) = in[1];
+	t.set(Value(t.size() + 1), in[1]);
 
 	return 0;
 }

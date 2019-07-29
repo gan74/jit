@@ -19,7 +19,14 @@ factors = decompose(42)
 	print(factors[i])
 end ]]
 
-for k, v in ipairs(factors) do 
+factors["prime"] = "yes"
+
+for k, v in pairs(factors) do 
 	print(k, v)
 end
 
+print("--------------------")
+
+for k, v in ipairs(factors) do 
+	print(k, v)
+end

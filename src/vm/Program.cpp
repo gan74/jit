@@ -68,6 +68,9 @@ static Function parse_func(const u8* data, usize& len) {
 	for(u32 i = 0; i != constants; ++i) {
 		Constant& cst = func.constants.emplace_back();
 		switch(cst.type = ConstantType(READ(u8))) {
+			case ConstantType::None:
+			break;
+
 			case ConstantType::String:
 			case ConstantType::LongString:
 				cst.string = parse_string(data, len);

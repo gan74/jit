@@ -23,24 +23,45 @@ SOFTWARE.
 #include "Table.h"
 #include "library.h"
 
+#include <algorithm>
+
 namespace jit {
 
 usize Table::size() const {
 	return _storage.size();
 }
 
-Value& Table::operator[](const Constant& cst) {
-	return (*this)[Value(cst)];
+void Table::set(const Constant& cst, const Value& value) {
+	set(Value(cst), value);
 }
 
-Value& Table::operator[](const Value& value) {
+void Table::set(const Value& key, const Value& value) {
+	auto it = std::find_if(begin(), end(), [&](const auto& p) { return p.first == key; });
+	if(value.type == ValueType::None) {
+		if(it != end()) {
+			_storage.erase(it);
+		}
+		return;
+	}
+
+	if(it == end()) {
+		_storage.emplace_back(key, value);
+	} else {
+		it->second = value;
+	}
+}
+
+Value Table::get(const Constant& cst) {
+	return get(Value(cst));
+}
+
+Value Table::get(const Value& value) {
 	for(auto& v : _storage) {
 		if(v.first == value) {
 			return v.second;
 		}
 	}
-	_storage.emplace_back(value, Value());
-	return _storage.back().second;
+	return Value();
 }
 
 }

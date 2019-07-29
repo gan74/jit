@@ -100,7 +100,7 @@ void VM::eval(const Program& program, Value* ret) {
 }
 
 void VM::eval(const Function& function, Value* ret, u32& ret_count) {
-	// MutableSpan<Value> outs = C == 1 ? MutableSpan<Value>() : MutableSpan<Value>(_func_stack + A, C - 1);
+
 	auto call = [this, &function](const Value& func_val, MutableSpan<Value> out, Span<Value> in) -> u32 {
 		if(func_val.type == ValueType::ExternalFunction) {
 			return func_val.func()(out, in);
@@ -164,14 +164,17 @@ void VM::eval(const Function& function, Value* ret, u32& ret_count) {
 
 				case OpCode::Settabup: {
 					Table& tab = tab_upvalue(UP(A));
-					tab.get(RK(B)) = RK(C);
+					tab.set(RK(B), RK(C));
 				} break;
 
 				case OpCode::Setupval:
 					upvalue(UP(B)) = R(A);
 				break;
 
-				/* ... */
+				case OpCode::Settable:
+					CHECK_TABLE(R(A));
+					R(A).table().set(RK(B), RK(C));
+				break;
 
 				case OpCode::Newtable:
 	#warning use B and C
