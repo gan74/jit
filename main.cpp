@@ -26,7 +26,7 @@ std::vector<u8> read_file(const char* filename) {
 void lua_main() {
 	auto luac = read_file("../../luac.out");
 
-	Program program = Program::from_luac(ArrayView(luac.data(), luac.size()));
+	Program program = Program::from_luac(ArrayView<u8>(luac.data(), luac.size()));
 
 	Table env = lib::default_env();
 

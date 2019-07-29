@@ -36,10 +36,26 @@ static void check_params(usize expected, usize len) {
 	}
 }
 
+static void check_params(usize expected, Span<Value> args) {
+	check_params(expected, args.size());
+}
+
 static void check_type(const Value& v, ValueType expected) {
 	if(v.type != expected) {
 		throw TypeErrorException(expected, v.type);
 	}
+}
+
+template<typename T, typename... Args>
+[[nodiscard]] static u32 build_out(MutableSpan<Value> out, T&& t, Args&&... args) {
+	if(out.size()) {
+		out[0] = std::forward<decltype(t)>(t);
+		if constexpr(sizeof...(args)) {
+			return 1 + build_out({out.data() + 1, out.size() - 1}, std::forward<decltype(args)>(args)...);
+		}
+		return 1;
+	}
+	return 0;
 }
 
 
@@ -71,6 +87,9 @@ Table default_env() {
 	Table env;
 
 	env[Value("print")] = &print;
+	env[Value("pairs")] = &pairs;
+	env[Value("ipairs")] = &ipairs;
+
 	env[Value("math")] = default_math();
 	env[Value("io")] = default_io();
 	env[Value("table")] = default_table();
@@ -78,44 +97,77 @@ Table default_env() {
 	return env;
 }
 
-Value print(const Value& v) {
-	return print(const_cast<Value*>(&v), 1);
+void print(const Value& v) {
+	print({}, v);
 }
 
-Value print(Value* v, usize len) {
-	for(usize i = 0; i != len; ++i) {
-		switch(v[i].type) {
+u32 print(MutableSpan<Value>, Span<Value> in) {
+	for(const Value& v : in) {
+		switch(v.type) {
 			case ValueType::None:
 				std::printf("nil ");
 			break;
 
 			case ValueType::Number:
-				std::printf("%lf ", v[i].number);
+				std::printf("%lf ", v.number);
 			break;
 
 			case ValueType::String:
-				std::printf("%s ", v[i].string().data());
+				std::printf("%s ", v.string().data());
 			break;
 
 			default:
-				std::printf("%s: %p ", v[i].type_str(), v[i].ptr);
+				std::printf("%s: %p ", v.type_str(), v.ptr);
 		}
 	}
 	std::printf("\n");
-	return Value();
+
+	return 0;
 }
 
-Value math_sqrt(Value* v, usize len) {
-	check_params(1, len);
-	check_type(v[0], ValueType::Number);
 
-	return std::sqrt(v->number);
+static u32 iterate(MutableSpan<Value> out, Span<Value> in) {
+	check_params(2, in);
+	check_type(in[0], ValueType::Table);
+	check_type(in[1], ValueType::Number);
+
+	Table& table = in[0].table();
+	double it = in[1].number;
+
+	if(it >= table.size()) {
+		return build_out(out, Value());
+	}
+	return build_out(out, Value(it + 1.0), table[it]);
 }
 
-Value io_read(Value* v, usize len) {
-	if(len) {
-		if(len != 1 || v->type != ValueType::String || v->string() != "*number") {
-			print(*v);
+u32 pairs(MutableSpan<Value> out, Span<Value> in) {
+	check_params(1, in);
+	unused(out);
+
+	fatal("Unsupported.");
+	return 0;
+}
+
+u32 ipairs(MutableSpan<Value> out, Span<Value> in) {
+	check_params(1, in);
+
+	return build_out(out, iterate, in[0], 0);
+}
+
+
+
+
+u32 math_sqrt(MutableSpan<Value> out, Span<Value> in) {
+	check_params(1, in);
+	check_type(in[0], ValueType::Number);
+
+	return build_out(out, std::sqrt(in[0].number));
+}
+
+u32 io_read(MutableSpan<Value> out, Span<Value> in) {
+	if(in.size()) {
+		if(in.size() != 1 || in[0].type != ValueType::String || in[0].string() != "*number") {
+			print(in[0]);
 			fatal("Unsupported");
 		}
 	}
@@ -123,18 +175,17 @@ Value io_read(Value* v, usize len) {
 	double d = 0.0;
 	std::scanf("%lf", &d);
 
-	return d;
+	return build_out(out, d);
 }
 
+u32 table_insert(MutableSpan<Value>, Span<Value> in) {
+	check_params(2, in);
+	check_type(in[0], ValueType::Table);
 
-Value table_insert(Value* v, usize len) {
-	check_params(2, len);
-	check_type(v[0], ValueType::Table);
+	Table& t = in[0].table();
+	t.get(Value(t.size())) = in[1];
 
-	Table& t = v[0].table();
-	t.get(Value(t.size() + 1)) = v[1];
-
-	return Value();
+	return 0;
 }
 
 }

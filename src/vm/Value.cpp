@@ -21,7 +21,6 @@ SOFTWARE.
 **********************************/
 
 #include "Value.h"
-#include <cassert>
 
 namespace jit {
 
@@ -83,24 +82,14 @@ const char* Value::type_str() const {
 	return type_str(type);
 }
 
-Table& Value::table() {
+Table& Value::table() const {
 	assert(type == ValueType::Table);
 	return *reinterpret_cast<Table*>(ptr);
 }
 
-std::string& Value::string() {
+std::string& Value::string() const {
 	assert(type == ValueType::String);
 	return *reinterpret_cast<std::string*>(ptr);
-}
-
-const Table& Value::table() const {
-	assert(type == ValueType::Table);
-	return *reinterpret_cast<const Table*>(ptr);
-}
-
-const std::string& Value::string() const {
-	assert(type == ValueType::String);
-	return *reinterpret_cast<const std::string*>(ptr);
 }
 
 FunctionPtr Value::func() const {
@@ -131,6 +120,10 @@ bool Value::operator==(const Value& value) const {
 		default:
 			return integer == value.integer;
 	}
+}
+
+bool Value::operator!=(const Value& value) const {
+	return !operator==(value);
 }
 
 Value& Value::operator=(const Value& v) {

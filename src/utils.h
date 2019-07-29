@@ -27,6 +27,8 @@ SOFTWARE.
 #include <cstring>
 #include <array>
 
+#include <cassert>
+
 namespace jit {
 
 using u8 = std::uint8_t;
@@ -67,34 +69,36 @@ class ScopeExit {
 
 
 template<typename T>
-class ArrayView {
+class MutableSpan {
+
 	public:
 		using value_type = T;
+		using iterator = T*;
 		using const_iterator = const T*;
 
-		constexpr ArrayView() = default;
+		constexpr MutableSpan() = default;
 
-		constexpr ArrayView(const ArrayView&) = default;
-		constexpr ArrayView& operator=(const ArrayView&) = default;
+		constexpr MutableSpan(const MutableSpan&) = default;
+		constexpr MutableSpan& operator=(const MutableSpan&) = default;
 
-		constexpr ArrayView(std::nullptr_t) {
+		MutableSpan(std::nullptr_t) {
 		}
 
-		ArrayView(const T& t) : _data(&t), _size(1) {
+		MutableSpan(T& t) : _data(&t), _size(1) {
 		}
 
-		ArrayView(const T* data, usize size) : _data(data), _size(size) {
-		}
-
-		template<usize N>
-		ArrayView(const T(&arr)[N]) : _data(arr), _size(N) {
+		MutableSpan(T* data, usize size) : _data(data), _size(size) {
 		}
 
 		template<usize N>
-		ArrayView(const std::array<T, N>& arr) : _data(arr.data()), _size(N) {
+		MutableSpan(T(&arr)[N]) : _data(arr), _size(N) {
 		}
 
-		ArrayView(std::initializer_list<T> l) : _data(l.begin()), _size(l.size()) {
+		template<usize N>
+		MutableSpan(std::array<T, N>& arr) : _data(arr.data()), _size(N) {
+		}
+
+		MutableSpan(std::initializer_list<T> l) : _data(l.begin()), _size(l.size()) {
 		}
 
 		usize size() const {
@@ -105,8 +109,20 @@ class ArrayView {
 			return !_size;
 		}
 
+		T* data() {
+			return _data;
+		}
+
 		const T* data() const {
 			return _data;
+		}
+
+		iterator begin() {
+			return _data;
+		}
+
+		iterator end() {
+			return _data + _size;
 		}
 
 		const_iterator begin() const {
@@ -125,14 +141,22 @@ class ArrayView {
 			return _data + _size;
 		}
 
-		const T& operator[](usize i) const {
+		T& operator[](usize i) const {
+			assert(i < _size);
 			return _data[i];
 		}
 
 	private:
-		const T* _data = nullptr;
+		T* _data = nullptr;
 		usize _size = 0;
+
 };
+
+template<typename T>
+using Span = MutableSpan<const T>;
+
+template<typename T>
+using ArrayView = Span<T>;
 
 }
 

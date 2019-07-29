@@ -31,15 +31,17 @@ namespace lib {
 
 Table default_env();
 
-Value print(const Value& v);
-Value print(Value* v, usize len);
+void print(const Value& v);
+u32 print(MutableSpan<Value>, Span<Value> in);
 
+u32 pairs(MutableSpan<Value> out, Span<Value> in);
+u32 ipairs(MutableSpan<Value> out, Span<Value> in);
 
-Value math_sqrt(Value* v, usize len);
+u32 math_sqrt(MutableSpan<Value> out, Span<Value> in);
 
-Value io_read(Value* v, usize len);
+u32 io_read(MutableSpan<Value> out, Span<Value> in);
 
-Value table_insert(Value* v, usize len);
+u32 table_insert(MutableSpan<Value> out, Span<Value> in);
 
 }
 }

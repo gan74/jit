@@ -53,8 +53,8 @@ class VM {
 
 		std::vector<Value> _upvalues;
 
-		static void check_type(const Value& value, ValueType type, const Instruction* instruction);
-		static void check_params(const Function& function, u32 args, const Instruction* instruction);
+		static void check_type(const Value& value, ValueType type);
+		static void check_params(const Function& function, u32 args);
 
 };
 

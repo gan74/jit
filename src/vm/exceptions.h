@@ -35,7 +35,7 @@ struct ExecutionException : public std::exception {
 		return _w;
 	}
 
-	const Instruction* const instruction = nullptr;
+	const Instruction* instruction = nullptr;
 
 	private:
 		const char* _w;

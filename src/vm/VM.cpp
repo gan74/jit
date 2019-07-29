@@ -27,10 +27,10 @@ SOFTWARE.
 
 #include <algorithm>
 
-#include <cassert>
+#include <cmath>
 
-#define CHECK_PARAMS(func, args) check_params(func, args, pc)
-#define CHECK_TYPE(value, type) check_type(value, type, pc)
+#define CHECK_PARAMS(func, args) check_params(func, args)
+#define CHECK_TYPE(value, type) check_type(value, type)
 #define CHECK_NUM(value) CHECK_TYPE(value, ValueType::Number)
 #define CHECK_TABLE(value) CHECK_TYPE(value, ValueType::Table)
 #define CHECK_CLOSURE(value) CHECK_TYPE(value, ValueType::Closure)
@@ -49,15 +49,15 @@ VM::VM(Table* env) : _stack(std::make_unique<Value[]>(1 << 16)) {
 	_func_stack = _stack.get() + 1;
 }
 
-void VM::check_params(const Function& function, u32 args, const Instruction* instruction) {
+void VM::check_params(const Function& function, u32 args) {
 	if(function.varargs || function.params != args) {
-		throw InvalidArgCountException(function.params, args, instruction);
+		throw InvalidArgCountException(function.params, args);
 	}
 }
 
-void VM::check_type(const Value& value, ValueType type, const Instruction* instruction) {
+void VM::check_type(const Value& value, ValueType type) {
 	if(value.type != type) {
-		throw TypeErrorException(type, value.type, instruction);
+		throw TypeErrorException(type, value.type);
 	}
 }
 
@@ -100,167 +100,213 @@ void VM::eval(const Program& program, Value* ret) {
 }
 
 void VM::eval(const Function& function, Value* ret, u32& ret_count) {
+	// MutableSpan<Value> outs = C == 1 ? MutableSpan<Value>() : MutableSpan<Value>(_func_stack + A, C - 1);
+	auto call = [this, &function](const Value& func_val, MutableSpan<Value> out, Span<Value> in) -> u32 {
+		if(func_val.type == ValueType::ExternalFunction) {
+			return func_val.func()(out, in);
+		}
+		CHECK_CLOSURE(func_val);
+		const Function& func = func_val.closure();
+		CHECK_PARAMS(func, in.size());
+		push_stack(function.regs);
+		std::copy(in.begin(), in.end(), _func_stack);
+		u32 returned = out.size();
+		eval(func, out.begin(), returned);
+		pop_stack();
+		return returned;
+	};
+
+
+	const u32 max_args = 254;
 	u32 last_ret_count = 0;
+	const Instruction* pc = nullptr;
+	try {
+		for(pc = function.instructions.begin();; ++pc) {
+			Instruction current = *pc;
 
-	for(const Instruction* pc = function.instructions.begin();; ++pc) {
-		Instruction current = *pc;
-		std::printf("%s\n", op_name(OpCode(current.opcode)));
+			//std::printf("%s %u %u %u\n", op_name(OpCode(current.opcode)), current.A, current.B, current.C);
+			//std::printf("%s\n", op_name(OpCode(current.opcode)));
+			/*
 
-		/*
+			for(u32 i = 0; i != function.regs + 5; ++i) {
+				std::printf("[%d] ", i);
+				lib::print(_func_stack[i]);
+			}
 
-		for(u32 i = 0; i != function.regs + 5; ++i) {
-			std::printf("[%d] ", i);
-			lib::print(_func_stack[i]);
-		}
+			*/
 
-		*/
+			switch(OpCode(current.opcode)) {
 
-		switch(OpCode(current.opcode)) {
+				case OpCode::Move:
+					R(A) = R(B);
+				break;
 
-			case OpCode::Move:
-				R(A) = R(B);
-			break;
+				case OpCode::Loadk:
+					R(A) = function.constants[current.Bx()];
+				break;
 
-			case OpCode::Loadk:
-				R(A) = function.constants[current.Bx()];
-			break;
+				/* ... */
 
-			/* ... */
+				case OpCode::Getupval:
+					R(A) = upvalue(UP(B));
+				break;
 
-			case OpCode::Getupval:
-				R(A) = upvalue(UP(B));
-				lib::print(R(A));
-			break;
+				case OpCode::Gettabup: {
+					Value& tab = upvalue(UP(B));
+					CHECK_TABLE(tab);
+					R(A) = tab.table().get(RK(C));
+				} break;
 
-			case OpCode::Gettabup: {
-				Value& tab = upvalue(UP(B));
-				CHECK_TABLE(tab);
-				R(A) = tab.table().get(RK(C));
-			} break;
+				case OpCode::Gettable:
+					CHECK_TABLE(R(B));
+					R(A) = R(B).table().get(RK(C));
+				break;
 
-			case OpCode::Gettable:
-				CHECK_TABLE(R(B));
-				R(A) = R(B).table().get(RK(C));
-			break;
+				case OpCode::Settabup: {
+					Table& tab = tab_upvalue(UP(A));
+					tab.get(RK(B)) = RK(C);
+				} break;
 
-			case OpCode::Settabup: {
-				Table& tab = tab_upvalue(UP(A));
-				tab.get(RK(B)) = RK(C);
-			} break;
+				case OpCode::Setupval:
+					upvalue(UP(B)) = R(A);
+				break;
 
-			case OpCode::Setupval:
-				upvalue(UP(B)) = R(A);
-			break;
+				/* ... */
 
-			/* ... */
+				case OpCode::Newtable:
+	#warning use B and C
+					R(A) = new Table();
+				break;
 
-			case OpCode::Newtable:
-#warning use B and C
-				R(A) = new Table();
-			break;
+				/* ... */
 
-			/* ... */
+				case OpCode::Add:
+					CHECK_NUM(RK(B));
+					CHECK_NUM(RK(C));
+					R(A) = RK(B).number + RK(C).number;
+				break;
 
-			case OpCode::Add:
-				CHECK_NUM(RK(B));
-				CHECK_NUM(RK(C));
-				R(A) = RK(B).number + RK(C).number;
-			break;
+				case OpCode::Sub:
+					CHECK_NUM(RK(B));
+					CHECK_NUM(RK(C));
+					R(A) = RK(B).number - RK(C).number;
+				break;
 
-			case OpCode::Sub:
-				CHECK_NUM(RK(B));
-				CHECK_NUM(RK(C));
-				R(A) = RK(B).number - RK(C).number;
-			break;
+				case OpCode::Mul:
+					CHECK_NUM(RK(B));
+					CHECK_NUM(RK(C));
+					R(A) = RK(B).number * RK(C).number;
+				break;
 
-			case OpCode::Mul:
-				CHECK_NUM(RK(B));
-				CHECK_NUM(RK(C));
-				R(A) = RK(B).number * RK(C).number;
-			break;
+				case OpCode::Mod:
+					CHECK_NUM(RK(B));
+					CHECK_NUM(RK(C));
+					R(A) = std::fmod(RK(B).number, RK(C).number);
+				break;
 
-			/* ... */
+				case OpCode::Pow:
+					CHECK_NUM(RK(B));
+					CHECK_NUM(RK(C));
+					R(A) = std::pow(RK(B).number, RK(C).number);
+				break;
 
-			case OpCode::Jmp:
-				pc += current.sBx() + 1;
-				if(current.A) {
-					fatal("Unsupported.");
-				}
-			break;
+				case OpCode::Div:
+					CHECK_NUM(RK(B));
+					CHECK_NUM(RK(C));
+					R(A) = RK(B).number / RK(C).number;
+				break;
 
-			case OpCode::Eq:
-				if((RK(B) == RK(C)) != current.A) {
-					++pc;
-				}
-			break;
+				/* ... */
 
-			/* ... */
-
-			case OpCode::Call: {
-				u32 args = current.B ? current.B - 1 : last_ret_count;
-				if(R(A).type == ValueType::ExternalFunction) {
-					if(current.C == 1) {
-						R(A).func()(_func_stack + current.A + 1, args);
-					} else {
-						// assume 1 returned value
-						R(A) = R(A).func()(_func_stack + current.A + 1, args);
-					}
-				} else {
-					CHECK_CLOSURE(R(A));
-					const Function& func = R(A).closure();
-					CHECK_PARAMS(func, args);
-					Value* arg_start = _func_stack + current.A + 1;
-					Value* ret_addr = &R(A);
-					push_stack(function.regs);
-					std::copy_n(arg_start, args, _func_stack);
-					last_ret_count = current.C - 1;
-					eval(func, ret_addr, last_ret_count);
-					pop_stack();
-				}
-			} break;
-
-
-			/* ... */
-
-			case OpCode::Return:
-				if(ret) {
-					ret_count = std::min(ret_count, current.B ? current.B - 1 : function.regs - current.A);
-					std::copy_n(_func_stack + current.A, ret_count, ret);
-					/*printf("ret = %d\n", ret_count);
-					lib::print(ret, ret_count);*/
-				}
-				return;
-			break;
-
-			case OpCode::Forloop:
-				CHECK_NUM(R(A));
-				CHECK_NUM(R(A + 1));
-				CHECK_NUM(R(A + 2));
-				CHECK_NUM(R(A + 3));
-				R(A).number += R(A + 2).number;
-				if(R(A + 2).number > 0.0 ? R(A).number <= R(A + 1).number : R(A).number >= R(A + 1).number) {
+				case OpCode::Jmp:
 					pc += current.sBx() + 1;
-					R(A + 3) = R(A);
-				}
-			break;
+					if(current.A) {
+						fatal("Unsupported.");
+					}
+				break;
 
-			case OpCode::Forprep:
-				CHECK_NUM(R(A));
-				CHECK_NUM(R(A + 2));
-				R(A).number -= R(A + 2).number;
-				pc += current.sBx() + 1;
-			break;
+				case OpCode::Eq:
+					if((RK(B) == RK(C)) != current.A) {
+						++pc;
+					}
+				break;
+
+				/* ... */
+
+				case OpCode::Call: {
+					u32 returns = current.C ? current.C - 1 : max_args;
+					MutableSpan<Value> out(_func_stack + current.A, returns);
+
+					u32 args = current.B ? current.B - 1 : last_ret_count;
+					Span<Value> in(_func_stack + current.A + 1, args);
+
+					last_ret_count = call(R(A), out, in);
+				} break;
 
 
-			/* ... */
+				/* ... */
 
-			case OpCode::Closure:
-				R(A) = &function.functions[current.Bx()];
-			break;
+				case OpCode::Return:
+					if(ret) {
+						ret_count = std::min(ret_count, current.B ? current.B - 1 : function.regs - current.A);
+						std::copy_n(_func_stack + current.A, ret_count, ret);
+						/*printf("ret = %d\n", ret_count);
+						lib::print(ret, ret_count);*/
+					}
+					return;
+				break;
 
-			default:
-				throw InvalidInstructionException(pc);
+				case OpCode::Forloop:
+					CHECK_NUM(R(A));
+					CHECK_NUM(R(A + 1));
+					CHECK_NUM(R(A + 2));
+					R(A).number += R(A + 2).number;
+					if(R(A + 2).number > 0.0 ? R(A).number <= R(A + 1).number : R(A).number >= R(A + 1).number) {
+						pc += current.sBx() + 1;
+						R(A + 3) = R(A);
+					}
+				break;
+
+				case OpCode::Forprep:
+					CHECK_NUM(R(A));
+					CHECK_NUM(R(A + 2));
+					R(A).number -= R(A + 2).number;
+					pc += current.sBx() + 1;
+				break;
+
+				case OpCode::Tforcall: {
+					if(!current.C) {
+						fatal("Unsupported.");
+					}
+					MutableSpan<Value> out(_func_stack + current.A + 3, current.C/* - 1*/);
+					Span<Value> in(_func_stack + current.A + 1, 2);
+
+					call(R(A), out, in);
+				} break;
+
+				case OpCode::Tforloop:
+					if(R(A + 1) != Value()) {
+						R(A) = R(A + 1);
+						pc += current.sBx() + 1;
+					}
+				break;
+
+
+				/* ... */
+
+				case OpCode::Closure:
+					R(A) = &function.functions[current.Bx()];
+				break;
+
+				default:
+					throw InvalidInstructionException(pc);
+			}
 		}
+	} catch(ExecutionException& exception) {
+		if(!exception.instruction) {
+			exception.instruction = pc;
+		}
+		throw;
 	}
 }
 

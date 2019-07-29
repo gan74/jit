@@ -41,7 +41,7 @@ enum class ValueType {
 };
 
 struct Value;
-using FunctionPtr = Value(*)(Value*, usize);
+using FunctionPtr = u32(*)(MutableSpan<Value>, Span<Value>);
 
 struct Value {
 	ValueType type = ValueType::None;
@@ -68,16 +68,15 @@ struct Value {
 	static const char* type_str(ValueType type);
 	const char* type_str() const;
 
-	Table& table();
-	std::string& string();
+	Table& table() const;
+	std::string& string() const;
 
-	const Table& table() const;
-	const std::string& string() const;
 	FunctionPtr func() const;
 	const Function& closure() const;
 
 
 	bool operator==(const Value& value) const;
+	bool operator!=(const Value& value) const;
 
 	Value& operator=(const Value& v);
 
