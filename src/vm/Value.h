@@ -33,6 +33,7 @@ class Table;
 enum class ValueType {
 	None,
 	Number,
+	Bool,
 	Table,
 	String,
 
@@ -74,6 +75,10 @@ struct Value {
 	FunctionPtr func() const;
 	const Function& closure() const;
 
+	static Value from_bool(bool b);
+	bool to_bool() const;
+
+	explicit operator bool() const;
 
 	bool operator==(const Value& value) const;
 	bool operator!=(const Value& value) const;

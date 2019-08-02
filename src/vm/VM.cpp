@@ -147,6 +147,21 @@ void VM::eval(const Function& function, Value* ret, u32& ret_count) {
 
 				/* ... */
 
+				case OpCode::Loadbool:
+					R(A) = Value::from_bool(current.B);
+					if(current.C) {
+						++pc;
+					}
+				break;
+
+				case OpCode::Loadnil:
+					for(usize i = 0; i <= current.B; ++i) {
+						R(A + i) = Value();
+					}
+				break;
+
+				/* ... */
+
 				case OpCode::Getupval:
 					R(A) = upvalue(UP(B));
 				break;
@@ -221,6 +236,20 @@ void VM::eval(const Function& function, Value* ret, u32& ret_count) {
 
 				/* ... */
 
+				case OpCode::Unm:
+					CHECK_NUM(R(B));
+					R(A) = -R(B).number;
+				break;
+
+				/* ... */
+
+				case OpCode::Len:
+					CHECK_TABLE(R(B));
+					R(A) = R(B).table().size();
+				break;
+
+				/* ... */
+
 				case OpCode::Jmp:
 					pc += current.sBx() + 1;
 					if(current.A) {
@@ -234,7 +263,33 @@ void VM::eval(const Function& function, Value* ret, u32& ret_count) {
 					}
 				break;
 
+				/*case OpCode::Lt:
+					if((RK(B) < RK(C)) != current.A) {
+						++pc;
+					}
+				break;
+
+				case OpCode::Le:
+					if((RK(B) <= RK(C)) != current.A) {
+						++pc;
+					}
+				break;*/
+
 				/* ... */
+
+				case OpCode::Test:
+					if(R(A).to_bool() != current.C) {
+						++pc;
+					}
+				break;
+
+				case OpCode::Testset:
+					if(R(B).to_bool() == current.C) {
+						R(A) = R(B);
+					} else {
+						++pc;
+					}
+				break;
 
 				case OpCode::Call: {
 					u32 returns = current.C ? current.C - 1 : max_args;
@@ -296,6 +351,15 @@ void VM::eval(const Function& function, Value* ret, u32& ret_count) {
 
 
 				/* ... */
+
+				case OpCode::Setlist: {
+					CHECK_TABLE(R(A));
+					Table& list = R(A).table();
+					usize start = (current.C - 1) * 50;
+					for(usize i = 1; i <= current.B; ++i) {
+						list.set(start + i, R(A + i));
+					}
+				} break;
 
 				case OpCode::Closure:
 					R(A) = &function.functions[current.Bx()];

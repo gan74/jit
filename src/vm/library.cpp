@@ -27,6 +27,7 @@ SOFTWARE.
 #include <cmath>
 #include <cstdio>
 #include <algorithm>
+#include <chrono>
 
 namespace jit {
 namespace lib {
@@ -61,39 +62,49 @@ template<typename T, typename... Args>
 
 
 static Table* default_io() {
-	Table* io = new Table();
+	Table* t = new Table();
 
-	io->set(Value("read"),  &io_read);
+	t->set(Value("read"),  &io_read);
 
-	return io;
+	return t;
 }
 
 static Table* default_math() {
-	Table* io = new Table();
+	Table* t = new Table();
 
-	io->set(Value("sqrt"), &math_sqrt);
+	t->set(Value("sqrt"), &math_sqrt);
 
-	return io;
+	return t;
 }
 
 static Table* default_table() {
-	Table* io = new Table();
+	Table* t = new Table();
 
-	io->set(Value("insert"), &table_insert);
+	t->set(Value("insert"), &table_insert);
 
-	return io;
+	return t;
+}
+
+static Table* default_os() {
+	Table* t = new Table();
+
+	t->set(Value("clock"), &os_clock);
+
+	return t;
 }
 
 Table default_env() {
 	Table env;
 
 	env.set(Value("print"), &print);
+	env.set(Value("tonumber"), &to_number);
 	env.set(Value("pairs"), &pairs);
 	env.set(Value("ipairs"), &ipairs);
 
 	env.set(Value("math"), default_math());
 	env.set(Value("io"), default_io());
 	env.set(Value("table"), default_table());
+	env.set(Value("os"), default_os());
 
 	return env;
 }
@@ -102,6 +113,9 @@ void print(const Value& v) {
 	print({}, v);
 }
 
+
+
+
 u32 print(MutableSpan<Value>, Span<Value> in) {
 	for(const Value& v : in) {
 		switch(v.type) {
@@ -109,8 +123,20 @@ u32 print(MutableSpan<Value>, Span<Value> in) {
 				std::printf("nil ");
 			break;
 
-			case ValueType::Number:
-				std::printf("%lf ", v.number);
+			// See https://stackoverflow.com/questions/277772/avoid-trailing-zeroes-in-printf
+			case ValueType::Number: {
+				double f = v.number;
+				char buffer[64];
+				int max_decimals = 10;
+				double order = std::pow(10, max_decimals);
+				double frac = std::abs(f) - std::abs(int(f));
+				assert(frac >= 0.0);
+				std::sprintf(buffer,"%.*g", max_decimals, std::ceil(order * frac) / order);
+				std::printf("%d%s ", int(f), buffer + 1);
+			} break;
+
+			case ValueType::Bool:
+				std::printf(v.integer ? "true " : "false ");
 			break;
 
 			case ValueType::String:
@@ -124,6 +150,25 @@ u32 print(MutableSpan<Value>, Span<Value> in) {
 	std::printf("\n");
 
 	return 0;
+}
+
+u32 to_number(MutableSpan<Value> out, Span<Value> in) {
+	check_params(1, in);
+
+	if(in[0].type == ValueType::String) {
+		const char* str = in[0].string().c_str();
+		char* end = nullptr;
+		double d = std::strtod(str, &end);
+		if(end == str) {
+			return build_out(out, Value());
+		}
+		return build_out(out, d);
+	}
+	if(in[0].type == ValueType::Number) {
+		return build_out(out, in[0]);
+	}
+	return build_out(out, Value());
+
 }
 
 u32 pairs(MutableSpan<Value> out, Span<Value> in) {
@@ -172,9 +217,6 @@ u32 ipairs(MutableSpan<Value> out, Span<Value> in) {
 	return build_out(out, iterate, in[0], 0);
 }
 
-
-
-
 u32 math_sqrt(MutableSpan<Value> out, Span<Value> in) {
 	check_params(1, in);
 	check_type(in[0], ValueType::Number);
@@ -205,6 +247,16 @@ u32 table_insert(MutableSpan<Value>, Span<Value> in) {
 
 	return 0;
 }
+
+u32 os_clock(MutableSpan<Value> out, Span<Value> in) {
+	check_params(0, in);
+	static auto start = std::chrono::high_resolution_clock::now();
+
+	auto now = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> secs = now - start;
+	return build_out(out, secs.count());
+}
+
 
 }
 }

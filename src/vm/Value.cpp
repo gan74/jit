@@ -74,7 +74,7 @@ Value::Value(const Constant& cst) {
 }
 
 const char* Value::type_str(ValueType type) {
-	static const char* names[] = {"nil", "number", "table", "string", "function", "function"};
+	static const char* names[] = {"nil", "number", "bool", "table", "string", "function", "function"};
 	return names[usize(type)];
 }
 
@@ -102,6 +102,23 @@ const Function& Value::closure() const {
 	return *reinterpret_cast<const Function*>(c_ptr);
 }
 
+Value Value::from_bool(bool b) {
+	Value v;
+	v.type = ValueType::Bool;
+	v.integer = b;
+	return v;
+}
+
+bool Value::to_bool() const {
+	if(type == ValueType::None) {
+		return false;
+	}
+	return type != ValueType::Bool || integer;
+}
+
+Value::operator bool() const {
+	return to_bool();
+}
 
 bool Value::operator==(const Value& value) const {
 	if(type != value.type) {

@@ -86,7 +86,7 @@ enum class OpCode : i32 {
 	Tforcall,		//	A C			R(A+3), ... , R(A+2+C) := R(A)(R(A+1), R(A+2));
 	Tforloop,		//	A sBx		if R(A+1) ~= nil then { R(A)=R(A+1); pc += sBx }
 
-	Setlist,		//	A B C		R(A)[(C-1)*FPF+i] := R(A+i), 1 <= i <= B
+	Setlist,		//	A B C		R(A)[(C-1)*FPF+i] := R(A+i), 1 <= i <= B; FPF = 50
 
 	Closure,		//	A Bx		R(A) := closure(KPROTO[Bx])
 

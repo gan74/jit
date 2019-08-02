@@ -1,4 +1,4 @@
 cls
-luac bytecode.lua
-luac -l bytecode.lua
-lua bytecode.lua
+luac test.lua
+luac -l test.lua
+lua test.lua

@@ -243,7 +243,7 @@ static Register r11  = Register(11, 64);
 static Register r12  = Register(12, 64);
 static Register r13  = Register(13, 64);
 static Register r14  = Register(14, 64);
-static Register r15 = Register(15, 64);
+static Register r15  = Register(15, 64);
 
 
 static Register arg0 = ecx;
