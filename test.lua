@@ -48,3 +48,17 @@ t["foo"] = 16;
 print(#t)
 t[4646843435] = 0;
 print(#t)
+t[1] = nil
+print(#t)
+
+print("------------------")
+
+for k, v in pairs(t) do 
+	print(k, v)
+end
+
+print("------------------")
+
+for k, v in ipairs(t) do 
+	print(k, v)
+end

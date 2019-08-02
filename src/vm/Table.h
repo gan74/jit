@@ -25,10 +25,17 @@ SOFTWARE.
 #include "Value.h"
 
 #include <vector>
+#include <unordered_map>
 
 namespace jit {
 
 class Table {
+	struct value_hash {
+		using argument_type = Value;
+		using result_type = u64;
+		result_type operator()(const argument_type& v) const noexcept;
+	};
+
 	public:
 		usize size() const;
 
@@ -37,8 +44,7 @@ class Table {
 
 
 		Value get(const Constant& cst);
-		Value get(const Value& value);
-
+		Value get(const Value& key);
 
 		auto begin() {
 			return _storage.begin();
@@ -48,8 +54,12 @@ class Table {
 			return _storage.end();
 		}
 
+		auto find(const Value& key) {
+			return _storage.find(key);
+		}
+
 	private:
-		std::vector<std::pair<Value, Value>> _storage;
+		std::unordered_map<Value, Value, value_hash> _storage;
 };
 
 

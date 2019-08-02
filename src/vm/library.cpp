@@ -126,13 +126,16 @@ u32 print(MutableSpan<Value>, Span<Value> in) {
 			// See https://stackoverflow.com/questions/277772/avoid-trailing-zeroes-in-printf
 			case ValueType::Number: {
 				double f = v.number;
+				//std::printf("%lf ", f);
+				using ll = long long;
 				char buffer[64];
 				int max_decimals = 10;
+				double positive = std::abs(f);
 				double order = std::pow(10, max_decimals);
-				double frac = std::abs(f) - std::abs(int(f));
-				assert(frac >= 0.0);
+				double frac = positive - ll(positive);
+				assert(frac >= 0.0 && frac < 1.0);
 				std::sprintf(buffer,"%.*g", max_decimals, std::ceil(order * frac) / order);
-				std::printf("%d%s ", int(f), buffer + 1);
+				std::printf(f < 0.0 ? "-%lld%s " : "%lld%s ", ll(positive), buffer + 1);
 			} break;
 
 			case ValueType::Bool:
@@ -174,24 +177,20 @@ u32 to_number(MutableSpan<Value> out, Span<Value> in) {
 u32 pairs(MutableSpan<Value> out, Span<Value> in) {
 	check_params(1, in);
 
-	/*unused(out);
-	fatal("Unsupported.");
-	return 0;*/
+	FunctionPtr iterate = [](MutableSpan<Value> it_out, Span<Value> it_in) -> u32 {
+		check_params(2, it_in);
+		check_type(it_in[0], ValueType::Table);
 
-	FunctionPtr iterate = [](MutableSpan<Value> out, Span<Value> in) -> u32 {
-		check_params(2, in);
-		check_type(in[0], ValueType::Table);
-
-		Table& table = in[0].table();
-		auto it = in[1].type == ValueType::None
+		Table& table = it_in[0].table();
+		auto it = it_in[1].type == ValueType::None
 			? table.begin()
-			: std::find_if(table.begin(), table.end(), [&](const auto& p) { return p.first == in[1]; }) + 1;
+			: std::next(table.find(it_in[1]));
 
 		if(it == table.end()) {
-			return build_out(out, Value());
+			return build_out(it_out, Value());
 		}
 
-		return build_out(out, it->first, it->second);
+		return build_out(it_out, it->first, it->second);
 	};
 
 	return build_out(out, iterate, in[0], Value());
@@ -200,18 +199,23 @@ u32 pairs(MutableSpan<Value> out, Span<Value> in) {
 u32 ipairs(MutableSpan<Value> out, Span<Value> in) {
 	check_params(1, in);
 
-	FunctionPtr iterate = [](MutableSpan<Value> out, Span<Value> in) -> u32 {
-		check_params(2, in);
-		check_type(in[0], ValueType::Table);
-		check_type(in[1], ValueType::Number);
+	FunctionPtr iterate = [](MutableSpan<Value> it_out, Span<Value> it_in) -> u32 {
+		check_params(2, it_in);
+		check_type(it_in[0], ValueType::Table);
+		check_type(it_in[1], ValueType::Number);
 
-		Table& table = in[0].table();
-		double next = in[1].number + 1.0;
+		Table& table = it_in[0].table();
+		double next = it_in[1].number + 1.0;
 
 		if(next >= table.size()) {
-			return build_out(out, Value());
+			return build_out(it_out, Value());
 		}
-		return build_out(out, next, table.get(next));
+
+		Value v = table.get(next);
+		if(v.type == ValueType::None) {
+			return build_out(it_out, Value());
+		}
+		return build_out(it_out, next, v);
 	};
 
 	return build_out(out, iterate, in[0], 0);

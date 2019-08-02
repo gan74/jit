@@ -27,6 +27,15 @@ SOFTWARE.
 
 namespace jit {
 
+
+Table::value_hash::result_type Table::value_hash::operator()(const argument_type& v) const noexcept {
+	if(v.type == ValueType::String) {
+		std::string_view str = v.string();
+		return std::hash<std::string_view>()(str);
+	}
+	return v.integer;
+}
+
 usize Table::size() const {
 	return _storage.size();
 }
@@ -36,7 +45,7 @@ void Table::set(const Constant& cst, const Value& value) {
 }
 
 void Table::set(const Value& key, const Value& value) {
-	auto it = std::find_if(begin(), end(), [&](const auto& p) { return p.first == key; });
+	auto it = find(key);
 	if(value.type == ValueType::None) {
 		if(it != end()) {
 			_storage.erase(it);
@@ -45,7 +54,7 @@ void Table::set(const Value& key, const Value& value) {
 	}
 
 	if(it == end()) {
-		_storage.emplace_back(key, value);
+		_storage[key] = value;
 	} else {
 		it->second = value;
 	}
@@ -55,12 +64,11 @@ Value Table::get(const Constant& cst) {
 	return get(Value(cst));
 }
 
-Value Table::get(const Value& value) {
-	for(auto& v : _storage) {
-		if(v.first == value) {
-			return v.second;
-		}
+Value Table::get(const Value& key) {
+	if(auto it = find(key); it != end()) {
+		return it->second;
 	}
+
 	return Value();
 }
 

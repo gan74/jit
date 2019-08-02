@@ -1,17 +1,15 @@
 cmake_minimum_required(VERSION 3.6)
 project(jit)
 
-include_directories(${jit_SOURCE_DIR})
+set(EXTRA_WARNINGS -Wzero-as-null-pointer-constant -Wsign-promo -Wfloat-conversion -Wshadow)
+set(MORE_WARNINGS -Woverloaded-virtual -Wnon-virtual-dtor -Wodr -Wdisabled-optimization -Wlogical-op -Wredundant-decls -Wundef -Wtautological-compare)
+set(COMPILE_OPTIONS -pedantic -Wall -Wextra ${EXTRA_WARNINGS} ${MORE_WARNINGS})
 
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -fomit-frame-pointer")
+SET(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -Wodr")
 
-set(ULTIMATE_WARNINGS "-Wdisabled-optimization -Wlogical-op -Wwrite-strings -Wmissing-include-dirs -Wredundant-decls -Wsign-promo -Wswitch-default -Wundef")
-set(EXTRA_WARNINGS "-Woverloaded-virtual -Wcast-qual -Wcast-align -Wunreachable-code -Wold-style-cast -Wnon-virtual-dtor -Wodr")
-
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
-
-add_definitions("${EXTRA_WARNINGS}")
-add_definitions("${ULTIMATE_WARNINGS}")
-add_definitions("-std=c++17 -pedantic -Wall -Wextra")
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(CMAKE_CXX_STANDARD 17)
 
 
 file(GLOB_RECURSE SOURCE_FILES
@@ -26,6 +24,7 @@ include_directories(./src/)
 
 
 add_executable(jit "${SOURCE_FILES}")
+target_compile_options(jit PRIVATE ${COMPILE_OPTIONS})
 
 
 

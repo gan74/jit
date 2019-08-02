@@ -140,8 +140,8 @@ void Assembler::addr_instr(u8 opcode, Register dst, RegisterIndexOffsetRegister 
 	{
 		bool is_64 = dst.is_64();
 		if(src.reg().is_r() || dst.is_r() || is_64) {
-			u8 opcode = 0x40 | (is_64 << 3);
-			push(opcode | (dst.is_r() << 2) | (src.reg().is_r() << 1) | src.offset().reg().is_r());
+			u8 op = 0x40 | (is_64 << 3);
+			push(op | (dst.is_r() << 2) | (src.reg().is_r() << 1) | src.offset().reg().is_r());
 		}
 	}
 	bool fixed_offset = src.has_fixed_offset();

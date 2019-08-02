@@ -195,6 +195,7 @@ Program Program::from_luac(ArrayView<u8> luac_data) {
 	}
 
 	u8 upvalues = READ(u8);
+	unused(upvalues);
 
 	Program program;
 	while(len < luac_data.size()) {
